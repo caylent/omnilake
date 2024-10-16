@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "OmniLake"
+version = "2024.9.24"
+description = "Data Lake Capabilities combined with AI to create an AWS based Intelligence Lake"
+authors = ["Jim Rosser <me@j4r.wtf>"]
+license = "All rights reserved"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+lancedb = "^0.12.0"
+boto3 = "^1.35.10"
+anthropic = "^0.34.1"
+da-vinci = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci", branch = "madness" }
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^3.2.7"
+notion-client = "^2.2.1"
+streamlit = "^1.39.0"
+gong = {git = "https://github.com/jarosser06/gong.git"}
+da-vinci-cdk = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci-cdk", branch = "madness" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
