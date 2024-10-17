@@ -326,12 +326,16 @@ class JobsClient(TableClient):
             raise
 
         finally:
+            if failed:
+                raise
+
             if not failed and not skip_completion:
                 job.status = JobStatus.COMPLETED
 
                 job.ended = datetime.now(tz=utc_tz)
 
                 self.put(job)
+
 
     def put(self, job: Job) -> None:
         """

@@ -462,7 +462,7 @@ requests-auth-aws-sigv4 = "0.7"
 type = "git"
 url = "https://github.com/jarosser06/da-vinci"
 reference = "madness"
-resolved_reference = "89b2eab14f49898bf369b81c0335e899439bedfa"
+resolved_reference = "a76b7ded2e3e26780c8c81c0ba7ed626e3fc6674"
 subdirectory = "da_vinci"
 
 [[package]]
@@ -483,7 +483,7 @@ da-vinci = {git = "https://github.com/jarosser06/da-vinci", branch = "madness", 
 type = "git"
 url = "https://github.com/jarosser06/da-vinci"
 reference = "madness"
-resolved_reference = "89b2eab14f49898bf369b81c0335e899439bedfa"
+resolved_reference = "a76b7ded2e3e26780c8c81c0ba7ed626e3fc6674"
 subdirectory = "da_vinci-cdk"
 
 [[package]]

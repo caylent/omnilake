@@ -14,7 +14,7 @@ from omnilake.internal_lib.event_definitions import (
     InformationRequestBody,
     QueryCompleteBody,
 )
-from omnilake.internal_lib.naming import EntryResourceName
+from omnilake.internal_lib.naming import EntryResourceName, OmniLakeResourceName
 
 from omnilake.tables.entries.client import Entry, EntriesClient
 from omnilake.tables.jobs.client import JobsClient, JobStatus
@@ -71,7 +71,7 @@ def sort_resource_names(resource_names: List[EntryResourceName], target_tags: Li
     entries_to_sort = []
 
     for resource_name in resource_names:
-        logging.debug(f'Fetching entry ID: {resource_name.resource_id}')
+        logging.debug(f'Fetching entry ID: {resource_name}')
 
         entry = entries.get(entry_id=resource_name.resource_id)
 
@@ -125,14 +125,14 @@ def handler(event: Dict, context: Dict):
 
     vs_queries.put(query_info)
 
-    resulting_resources = query_info.resulting_resources
+    resulting_resources = [OmniLakeResourceName.from_string(r) for r in query_info.resulting_resources]
 
     # Handle sorting of the responses if over the max_entries limit
     if query_info.max_entries < len(query_info.resulting_resources):
         logging.info(f'Sorting results for query {event_body.query_id}.')
 
         sorted_resources = sort_resource_names(
-            resource_names=[EntryResourceName(r) for r in query_info.resulting_resources],
+            resource_names=resulting_resources,
             target_tags=query_info.target_tags,
         )
 
@@ -144,7 +144,7 @@ def handler(event: Dict, context: Dict):
 
     information_request_body = InformationRequestBody(
         request_id=query_info.request_id,
-        resource_names=list(resulting_resources),
+        resource_names=list([str(res) for res in resulting_resources]),
         request_stage='QUERY_COMPLETE',
     )
 

@@ -1,7 +1,6 @@
 """
 Handles the Vector Storage queries
 """
-
 import json
 import logging
 

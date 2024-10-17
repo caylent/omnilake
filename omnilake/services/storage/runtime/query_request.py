@@ -130,6 +130,8 @@ def handler(event: Dict, context: Dict):
             archive_id=event_body.archive_id,
             query_id=vector_store_query.query_id,
             query_str=event_body.query_string,
+            parent_job_id=query_job.job_id,
+            parent_job_type='QUERY_REQUEST',
             vector_store_ids=vector_store_search_group,
         )
 

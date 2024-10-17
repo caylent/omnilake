@@ -2,7 +2,6 @@ from os import path
 
 from aws_cdk import (
     Duration,
-    RemovalPolicy,
 )
 
 from aws_cdk.aws_iam import ManagedPolicy
@@ -20,6 +19,7 @@ from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
 from da_vinci_cdk.constructs.lambda_function import LambdaFunction
 from da_vinci_cdk.constructs.service import SimpleRESTService
 
+from omnilake.tables.archives.stack import Archive, ArchiveTable
 from omnilake.tables.entries.stack import Entry, EntriesTable
 from omnilake.tables.jobs.stack import Job, JobsTable
 from omnilake.tables.information_requests.stack import (
@@ -57,6 +57,7 @@ class ResponderEngineStack(Stack):
             app_base_image=app_base_image,
             architecture=architecture,
             required_stacks=[
+                ArchiveTable,
                 CompactionJobsTable,
                 EntriesTable,
                 JobsTable,
@@ -87,6 +88,11 @@ class ResponderEngineStack(Stack):
                 ResourceAccessRequest(
                     resource_name='event_bus',
                     resource_type=ResourceType.ASYNC_SERVICE,
+                ),
+                ResourceAccessRequest(
+                    resource_type=ResourceType.TABLE,
+                    resource_name=Archive.table_name,
+                    policy_name='read',
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,

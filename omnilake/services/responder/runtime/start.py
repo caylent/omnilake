@@ -22,6 +22,7 @@ from omnilake.internal_lib.event_definitions import (
 )
 from omnilake.internal_lib.naming import EntryResourceName
 
+from omnilake.tables.archives.client import ArchivesClient
 from omnilake.tables.jobs.client import Job, JobsClient, JobStatus
 from omnilake.tables.information_requests.client import (
     InformationRequestsClient,
@@ -142,6 +143,32 @@ def _validate_resource_names(resource_names: List[str]):
     pass
 
 
+def _validate_requests(requests: List[VectorArchiveInformationRequest]):
+    '''
+    Validates the request
+
+    Keyword arguments:
+    request -- The request
+    '''
+
+    archives = ArchivesClient()
+
+    fetched_archives = []
+
+    for request in requests:
+        archive_id = request.archive_id
+
+        if archive_id in fetched_archives:
+            continue
+
+        archive = archives.get(archive_id=archive_id)
+
+        if not archive:
+            raise ValueError(f'Archive with ID {archive_id} does not exist')
+
+        fetched_archives.append(archive_id)
+
+
 def _handle_initial_phase(event_body: InformationRequestBody) -> bool:
     '''
     Handles the initial phase of the information request
@@ -171,6 +198,11 @@ def _handle_initial_phase(event_body: InformationRequestBody) -> bool:
         info_request.original_sources = set(event_body.resource_names)
 
     active_queries = 0
+
+    loaded_requests = load_raw_requests(event_body.requests)
+
+    with jobs.job_execution(parent_job, skip_completion=True):
+        _validate_requests(loaded_requests)
 
     # Initial load of the requests to catch any errors early
     with jobs.job_execution(parent_job, failure_status_message='Failed to load requested data', skip_completion=True):

@@ -90,7 +90,7 @@ class SourcesAPI(ChildAPI):
         """
         sources = SourcesClient()
 
-        source = sources.get(source_id=source_id)
+        source = sources.get_by_source_id(source_id=source_id)
 
         if not source:
             return self.respond(
@@ -132,7 +132,7 @@ class SourcesAPI(ChildAPI):
         """
         sources = SourcesClient()
 
-        source = sources.get(source_id=source_id)
+        source = sources.get_by_source_id(source_id=source_id)
 
         if not source:
             return self.respond(
