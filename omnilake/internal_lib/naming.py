@@ -37,9 +37,9 @@ class ResourceNameObject:
         resource_type -- The resource type
         resource_id -- The resource ID
         """
-        # Check if the resource ID is actually a full CRN and handle it.
+        # Check if the resource ID is actually a full ORN and handle it.
         # It's a bit of magic, so I don't have to think about these things getting converted back and forth.
-        if resource_id.startswith('crn'):
+        if resource_id.startswith('orn'):
             return self.from_resource_name(resource_id)
 
         self.resource_type = resource_type
@@ -47,7 +47,7 @@ class ResourceNameObject:
         self.resource_id = resource_id
 
     def __str__(self):
-        return f"crn::{self.resource_type}::{self.resource_id}"
+        return f"orn::{self.resource_type}::{self.resource_id}"
 
     @staticmethod
     def from_resource_name(resource_name: str) -> 'ResourceNameObject':
@@ -59,7 +59,7 @@ class ResourceNameObject:
         """
         pieces = resource_name.split("::")
 
-        if pieces[0] != "crn":
+        if pieces[0] != "orn":
             raise ValueError(f"Invalid resource name: {resource_name}")
 
         resource_type = pieces[1]
@@ -128,7 +128,7 @@ class SourceResourceName(ResourceNameObject):
 
 
 class OmniLakeResourceName:
-    __crn_type_map = {
+    __orn_type_map = {
         "archive": ArchiveResourceName,
         "entry": EntryResourceName,
         "job": JobResourceName,
@@ -143,10 +143,10 @@ class OmniLakeResourceName:
         resource_type -- The resource type
         resource_id -- The resource ID
         """
-        if resource_type not in self.__crn_type_map:
+        if resource_type not in self.__orn_type_map:
             raise ValueError(f"Invalid resource type: {resource_type}")
 
-        return self.__crn_type_map[resource_type](resource_id)
+        return self.__orn_type_map[resource_type](resource_id)
 
     @staticmethod
     def from_string(resource_name: str) -> ResourceNameObject:
