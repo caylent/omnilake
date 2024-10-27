@@ -37,9 +37,6 @@ class ResourceNameObject:
         resource_type -- The resource type
         resource_id -- The resource ID
         """
-        # Check if the resource ID is actually a full ORN and handle it.
-        # It's a bit of magic, so I don't have to think about these things getting converted back and forth.
-
         self.resource_type = resource_type
 
         self.resource_id = resource_id
