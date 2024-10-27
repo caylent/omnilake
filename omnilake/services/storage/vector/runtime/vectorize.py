@@ -24,7 +24,7 @@ from omnilake.internal_lib.clients import RawStorageManager
 from omnilake.internal_lib.event_definitions import IndexEntryBody
 from omnilake.internal_lib.job_types import JobType
 
-from omnilake.services.storage.runtime.vector_storage import (
+from omnilake.services.storage.vector.runtime.vector_storage import (
     choose_vector_stores,
     DocumentChunk,
 )
@@ -35,7 +35,8 @@ from omnilake.tables.vector_stores.client import VectorStoresClient
 from omnilake.tables.vector_store_chunks.client import VectorStoreChunksClient, VectorStoreChunk
 from omnilake.tables.vector_store_tags.client import VectorStoreTagsClient
 
-from omnilake.services.storage.runtime.maintenance import (
+from omnilake.services.storage.vector.runtime.generate_tags import GenerateEntryTagsBody
+from omnilake.services.storage.vector.runtime.maintenance import (
     RequestMaintenanceModeEnd,
 )
 
@@ -150,7 +151,7 @@ def generate_vector_data(entry_id: str, text_chunks: List[str]) -> List[Document
     return data
 
 
-@fn_event_response(function_name="vectorize_content", exception_reporter=ExceptionReporter(), logger=Logger("omnilake.storage.vectorize_entry"))
+@fn_event_response(function_name="vectorize_content", exception_reporter=ExceptionReporter(), logger=Logger("omnilake.storage.vector.vectorize_entry"))
 def handler(event: Dict, context: Dict):
     """
     Vectorizes the text data and stores it in vector storage.
@@ -171,9 +172,16 @@ def handler(event: Dict, context: Dict):
 
     vectorize_job = job.create_child(job_type=JobType.INDEX_ENTRY)
 
+    if vectorize_job.status == JobStatus.FAILED:
+        logging.info(f"Job {vectorize_job.job_id} failed, not finishing vectorization")
+
     vectorize_job.status = JobStatus.IN_PROGRESS
 
     vectorize_job.started = datetime.now(utc_tz)
+
+    entries = EntriesClient()
+
+    entry_obj = entries.get(event_body.entry_id)
 
     storage_mgr = RawStorageManager()
 
@@ -183,10 +191,36 @@ def handler(event: Dict, context: Dict):
     if 'message' in entry_content.response_body:
         raise Exception(f"Error retrieving entry content: {entry_content.response_body['message']}")
 
-    # Get the max chunk length and overlap from the settings
-    max_chunk_length = setting_value(namespace='storage', setting_key='max_chunk_length')
+    if not entry_obj.tags:
+        logging.info(f"Entry {event_body.entry_id} has no tags, sending generate_tags event")
 
-    chunk_overlap = setting_value(namespace='storage', setting_key='chunk_overlap')
+        event_publisher = EventPublisher()
+
+        event_publisher.submit(
+            event=EventBusEvent(
+                body=GenerateEntryTagsBody(
+                    entry_id=event_body.entry_id,
+                    content=entry_content.response_body['content'],
+                    parent_job_id=job.job_id,
+                    parent_job_type=job.job_type,
+                )
+            )
+        )
+
+        event_publisher.submit(
+            event=EventBusEvent(
+                body=event_body.to_dict(),
+                event_type=event_body.event_type,
+            ),
+            delay=90,
+        )
+
+        return
+
+    # Get the max chunk length and overlap from the settings
+    max_chunk_length = setting_value(namespace='vector_storage', setting_key='max_chunk_length')
+
+    chunk_overlap = setting_value(namespace='vector_storage', setting_key='chunk_overlap')
 
     # Chunk the text
     text_chunks = chunk_text(entry_content.response_body['content'], max_chunk_length, chunk_overlap)
@@ -195,15 +229,11 @@ def handler(event: Dict, context: Dict):
     data = generate_vector_data(event_body.entry_id, text_chunks=text_chunks)
 
     # Connect to the vector storage
-    vector_bucket = setting_value(namespace='storage', setting_key='vector_store_bucket')
+    vector_bucket = setting_value(namespace='vector_storage', setting_key='vector_store_bucket')
 
     db = lancedb.connect(f's3://{vector_bucket}')
 
     # Choose the appropriate vector store
-    entries = EntriesClient()
-
-    entry_obj = entries.get(event_body.entry_id)
-
     logging.debug(f"Entry tags: {entry_obj.tags}")
 
     if event_body.vector_store_id:

@@ -27,14 +27,14 @@ from omnilake.tables.jobs.client import Job, JobsClient, JobStatus
 from omnilake.tables.information_requests.client import (
     InformationRequestsClient,
 )
-from omnilake.tables.compaction_jobs.client import (
-    CompactionJob,
-    CompactionJobsTableClient
+from omnilake.tables.summary_jobs.client import (
+    SummaryJob,
+    SummaryJobsTableClient,
 )
 
 from omnilake.tables.vector_store_chunks.client import VectorStoreChunksClient
 
-from omnilake.services.responder.runtime.compactor import CompactionRequest
+from omnilake.services.responder.runtime.summarizer import SummarizationRequest
 from omnilake.services.responder.runtime.request_types import (
     load_raw_requests,
     VectorArchiveInformationRequest,
@@ -296,7 +296,7 @@ def start_responder(event: Dict, context: Dict):
 
         jobs.put(parent_job)
 
-    compaction_context = CompactionJob(
+    compaction_context = SummaryJob(
         current_run=1,
         request_id=info_req.request_id,
         parent_job_id=info_req.job_id,
@@ -304,7 +304,7 @@ def start_responder(event: Dict, context: Dict):
         remaining_processes=total_num_of_entries,
     )
 
-    compaction_jobs = CompactionJobsTableClient()
+    compaction_jobs = SummaryJobsTableClient()
 
     compaction_jobs.put(compaction_context)
 
@@ -316,7 +316,7 @@ def start_responder(event: Dict, context: Dict):
 
         event_publisher.submit(
             event=EventBusEvent(
-                body=CompactionRequest(
+                body=SummarizationRequest(
                     goal=event_body.goal,
                     request_id=event_body.request_id,
                     resource_names=[og_source],

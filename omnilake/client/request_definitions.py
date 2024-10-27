@@ -14,9 +14,9 @@ class RequestSuperclass:
 
 @dataclass
 class AddEntry(RequestSuperclass):
-    archive_id: str
     content: str
     sources: List[str]
+    archive_id: Optional[str] = None
     effective_on: Optional[str] = None # will be set to time of insertion if not provided
     original: Optional[str] = None
     summarize: Optional[bool] = False
@@ -38,7 +38,7 @@ class AddSource(RequestSuperclass):
 class CreateArchive(RequestSuperclass):
     archive_id: str
     description: str
-    storage_type: Optional[str] = 'VECTOR_STORAGE'
+    storage_type: Optional[str] = 'VECTOR_STORAGE' # VECTOR_STORAGE or BASIC_STORAGE
 
 
 @dataclass
@@ -109,6 +109,11 @@ class InformationRequest(RequestSuperclass):
     goal: str
     requests: List[Union[Dict, BasicArchiveInformationRequest, VectorArchiveInformationRequest]]
     resource_names: Optional[List[str]] = None
+    responder_model_id: Optional[str] = None # system default used if not provided
+    responder_prompt: Optional[str] = None # system default used if not provided
+    summarization_algorithm: Optional[str] = 'STANDARD'
+    summarization_prompt: Optional[str] = None # system default used if not provided
+    summarization_model_id: Optional[str] = None # system default used if not provided
 
     def __post_init__(self):
         normalized_requests = []

@@ -26,16 +26,17 @@ from omnilake.tables.information_requests.stack import (
     InformationRequest,
     InformationRequestsTable,
 )
-from omnilake.tables.compaction_jobs.stack import (
-    CompactionJob,
-    CompactionJobsTable,
+from omnilake.tables.summary_jobs.stack import (
+    SummaryJob,
+    SummaryJobsTable,
 )
 from omnilake.tables.vector_store_chunks.stack import (
     VectorStoreChunksTable,
     VectorStoreChunk,
 )
 
-from omnilake.services.storage.stack import StorageManagerStack
+from omnilake.services.storage.raw.stack import RawStorageManagerStack
+from omnilake.services.storage.vector.stack import VectorStorageManagerStack
 
 class ResponderEngineStack(Stack):
     def __init__(self, app_name: str, app_base_image: str, architecture: str,
@@ -58,12 +59,13 @@ class ResponderEngineStack(Stack):
             architecture=architecture,
             required_stacks=[
                 ArchiveTable,
-                CompactionJobsTable,
                 EntriesTable,
                 JobsTable,
                 InformationRequestsTable,
-                StorageManagerStack,
+                RawStorageManagerStack,
+                SummaryJobsTable,
                 VectorStoreChunksTable,
+                VectorStorageManagerStack,
             ],
             deployment_id=deployment_id,
             scope=scope,
@@ -96,7 +98,7 @@ class ResponderEngineStack(Stack):
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
-                    resource_name=CompactionJob.table_name,
+                    resource_name=SummaryJob.table_name,
                     policy_name='read_write'
                 ),
                 ResourceAccessRequest(
@@ -119,20 +121,20 @@ class ResponderEngineStack(Stack):
             timeout=Duration.minutes(5),
         )
 
-        self.compaction_processor = EventBusSubscriptionFunction(
+        self.summarization_processor = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
-            construct_id='compaction-processor',
-            event_type='begin_compaction',
-            description='Processes compaction requests.',
+            construct_id='summarization-processor',
+            event_type='begin_summarization',
+            description='Processes summarization requests.',
             entry=self.runtime_path,
-            index='compactor.py',
-            handler='compact_resources',
-            function_name=resource_namer('compaction-processor', scope=self),
+            index='summarizer.py',
+            handler='summarize_resources',
+            function_name=resource_namer('summary-processor', scope=self),
             memory_size=512,
             managed_policies=[
                 ManagedPolicy.from_managed_policy_arn(
                     scope=self,
-                    id='compaction-processor-amazon-bedrock-full-access',
+                    id='summary-processor-amazon-bedrock-full-access',
                     managed_policy_arn='arn:aws:iam::aws:policy/AmazonBedrockFullAccess'
                 ),
             ],
@@ -160,15 +162,15 @@ class ResponderEngineStack(Stack):
             timeout=Duration.minutes(5),
         )
 
-        self.compaction_watcher = EventBusSubscriptionFunction(
+        self.summary_watcher = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
-            construct_id='compaction-watcher',
-            event_type='compaction_completed',
-            description='Watches for compaction completion events.',
+            construct_id='summary-watcher',
+            event_type='summary_completed',
+            description='Watches for summary completion events.',
             entry=self.runtime_path,
-            index='compactor.py',
-            handler='compaction_watcher',
-            function_name=resource_namer('compaction-watcher', scope=self),
+            index='summary.py',
+            handler='summary_watcher',
+            function_name=resource_namer('summary-watcher', scope=self),
             resource_access_requests=[
                 ResourceAccessRequest(
                     resource_name='event_bus',
@@ -176,7 +178,7 @@ class ResponderEngineStack(Stack):
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
-                    resource_name=CompactionJob.table_name,
+                    resource_name=SummaryJob.table_name,
                     policy_name='read_write'
                 ),
                 ResourceAccessRequest(
@@ -216,7 +218,7 @@ class ResponderEngineStack(Stack):
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
-                    resource_name=CompactionJob.table_name,
+                    resource_name=SummaryJob.table_name,
                     policy_name='read_write'
                 ),
                 ResourceAccessRequest(
@@ -258,7 +260,7 @@ class ResponderEngineStack(Stack):
         )
 
         self.max_content_group_size = GlobalSetting(
-            description='The maximum size a group of content can be for compaction purposes.',
+            description='The maximum size a group of content can be for summarization purposes.',
             namespace='responder',
             setting_key='max_content_group_size',
             setting_value=5,
@@ -267,9 +269,9 @@ class ResponderEngineStack(Stack):
         )
 
         self.maximum_recursion_depth = GlobalSetting(
-            description='The maximum recursive depth allowed for compaction.',
+            description='The maximum recursive depth allowed for summarization.',
             namespace='responder',
-            setting_key='compaction_maximum_recursion_depth',
+            setting_key='summary_maximum_recursion_depth',
             setting_value=4,
             scope=self,
             setting_type=SettingType.INTEGER

@@ -94,7 +94,7 @@ def sort_resource_names(resource_names: List[EntryResourceName], target_tags: Li
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name='query_complete',
-                     logger=Logger('omnilake.services.storage.query_complete'))
+                     logger=Logger('omnilake.storage.vector.query_complete'))
 def handler(event: Dict, context: Dict):
     """
     Handle the query complete event

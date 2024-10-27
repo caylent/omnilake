@@ -7,7 +7,7 @@ from omnilake.api.stack import OmniLakeAPIStack
 
 from omnilake.services.ingestion.stack import IngestionServiceStack
 from omnilake.services.responder.stack import ResponderEngineStack
-from omnilake.services.storage.stack import StorageManagerStack
+from omnilake.services.storage.vector.stack import VectorStorageManagerStack
 
 base_dir = Stack.absolute_dir(__file__)
 
@@ -31,6 +31,6 @@ omnilake.add_uninitialized_stack(IngestionServiceStack)
 
 omnilake.add_uninitialized_stack(ResponderEngineStack)
 
-omnilake.add_uninitialized_stack(StorageManagerStack)
+omnilake.add_uninitialized_stack(VectorStorageManagerStack)
 
 omnilake.synth()

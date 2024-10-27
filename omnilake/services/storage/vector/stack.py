@@ -21,7 +21,6 @@ from da_vinci_cdk.constructs.base import resource_namer
 from da_vinci_cdk.constructs.global_setting import GlobalSetting, SettingType
 from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
 from da_vinci_cdk.constructs.lambda_function import LambdaFunction
-from da_vinci_cdk.constructs.service import SimpleRESTService
 
 from omnilake.tables.archives.stack import Archive, ArchiveTable
 from omnilake.tables.entries.stack import Entry, EntriesTable
@@ -31,8 +30,10 @@ from omnilake.tables.vector_store_chunks.stack import VectorStoreChunk, VectorSt
 from omnilake.tables.vector_store_tags.stack import VectorStoreTag, VectorStoreTagsTable
 from omnilake.tables.vector_store_queries.stack import VectorStoreQueriesTable, VectorStoreQuery
 
+from omnilake.services.storage.raw.stack import RawStorageManagerStack
 
-class StorageManagerStack(Stack):
+
+class VectorStorageManagerStack(Stack):
     def __init__(self, app_name: str, app_base_image: str, architecture: str,
                  deployment_id: str, stack_name: str, scope: Construct):
         """
@@ -55,6 +56,7 @@ class StorageManagerStack(Stack):
                 ArchiveTable,
                 EntriesTable,
                 JobsTable,
+                RawStorageManagerStack,
                 VectorStoresTable,
                 VectorStoreChunksTable,
                 VectorStoreQueriesTable,
@@ -69,20 +71,6 @@ class StorageManagerStack(Stack):
 
         self.runtime_path = path.join(base_dir, 'runtime')
 
-        self.raw_entry_bucket = Bucket(
-            self,
-            'raw_entry_bucket',
-            encryption=BucketEncryption.S3_MANAGED,
-            removal_policy=RemovalPolicy.DESTROY,
-        )
-
-        self.raw_entry_bucket_setting = GlobalSetting(
-            namespace='storage',
-            setting_key='raw_entry_bucket',
-            setting_value=self.raw_entry_bucket.bucket_name,
-            scope=self,
-        )
-
         self.vector_store_bucket = Bucket(
             self,
             'vector-store-bucket',
@@ -96,26 +84,6 @@ class StorageManagerStack(Stack):
             setting_value=self.vector_store_bucket.bucket_name,
             scope=self,
         )
-
-        self.raw_storage_manager = SimpleRESTService(
-            base_image=self.app_base_image,
-            description='Manages the raw data storage for the runtime.',
-            entry=self.runtime_path,
-            index='raw_manager.py',
-            handler='handler',
-            memory_size=512,
-            resource_access_requests=[
-                ResourceAccessRequest(
-                    resource_name=Entry.table_name,
-                    resource_type=ResourceType.TABLE,
-                    policy_name='read',
-                ),
-            ],
-            scope=self,
-            service_name='raw_storage_manager',
-        )
-
-        self.raw_entry_bucket.grant_read_write(self.raw_storage_manager.handler.function)
 
         self.storage_provisioner = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
@@ -149,6 +117,43 @@ class StorageManagerStack(Stack):
         )
 
         self.vector_store_bucket.grant_read_write(self.storage_provisioner.handler.function)
+
+        self.entry_tag_generator_event = EventBusSubscriptionFunction(
+            base_image=self.app_base_image,
+            construct_id='vector_entry_tag_generator',
+            description='Generates tags for an entry.',
+            entry=self.runtime_path,
+            event_type='generate_entry_tags',
+            index='generate_tags.py',
+            handler='handler',
+            function_name=resource_namer('entry-tag-generator', scope=self),
+            memory_size=512,
+            managed_policies=[
+                ManagedPolicy.from_managed_policy_arn(
+                    scope=self,
+                    id='entry-tagger-amazon-bedrock-full-access',
+                    managed_policy_arn='arn:aws:iam::aws:policy/AmazonBedrockFullAccess'
+                ),
+            ],
+            resource_access_requests=[
+                ResourceAccessRequest(
+                    resource_name='event_bus',
+                    resource_type=ResourceType.ASYNC_SERVICE,
+                ),
+                ResourceAccessRequest(
+                    resource_name=Entry.table_name,
+                    resource_type=ResourceType.TABLE,
+                    policy_name='read_write',
+                ),
+                ResourceAccessRequest(
+                    resource_name=Job.table_name,
+                    resource_type=ResourceType.TABLE,
+                    policy_name='read_write',
+                ),
+            ],
+            scope=self,
+            timeout=Duration.minutes(2),
+        )
 
         self.entry_index_event = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
@@ -187,6 +192,10 @@ class StorageManagerStack(Stack):
                     policy_name='read_write',
                 ),
                 ResourceAccessRequest(
+                    resource_name='raw_storage_manager',
+                    resource_type=ResourceType.REST_SERVICE,
+                ),
+                ResourceAccessRequest(
                     resource_name=VectorStore.table_name,
                     resource_type=ResourceType.TABLE,
                     policy_name='read_write',
@@ -205,8 +214,6 @@ class StorageManagerStack(Stack):
             scope=self,
             timeout=Duration.minutes(2),
         )
-
-        self.raw_storage_manager.grant_invoke(self.entry_index_event.handler.function)
 
         self.vector_store_bucket.grant_read_write(self.entry_index_event.handler.function)
 
@@ -309,7 +316,7 @@ class StorageManagerStack(Stack):
 
         self.max_entries_per_vector = GlobalSetting(
             description="The maximum number of entries that should be stored in a vector store.",
-            namespace='storage',
+            namespace='vector_storage',
             setting_key='max_entries_per_vector',
             setting_value=1000,
             scope=self,
@@ -318,7 +325,7 @@ class StorageManagerStack(Stack):
 
         self.max_entries_threshold = GlobalSetting(
             description="The threshold percentage used to calculate when a vector store is nearing its maximum entry count and should be rebalanced.",
-            namespace='storage',
+            namespace='vector_storage',
             setting_key='max_entries_rebalance_threshold',
             setting_value=20,
             scope=self,
@@ -327,7 +334,7 @@ class StorageManagerStack(Stack):
 
         self.max_vector_store_search_group_size = GlobalSetting(
             description="The maximum number of vector stores to search for a single vs_query execution.",
-            namespace='storage',
+            namespace='vector_storage',
             setting_key='max_vector_store_search_group_size',
             setting_value=10,
             scope=self,
@@ -336,8 +343,8 @@ class StorageManagerStack(Stack):
 
         self.maintenance_delay_interval = GlobalSetting(
             description="The delay interval to use when archive is under maintenance.",
-            namespace='storage',
-            setting_key='maintenance_delay_interval',
+            namespace='vector_storage',
+            setting_key='query_delay',
             setting_value=600,
             scope=self,
             setting_type=SettingType.INTEGER
@@ -345,7 +352,7 @@ class StorageManagerStack(Stack):
 
         self.tag_recalculation_frequency = GlobalSetting(
             description="The frequency at which to recalculate vector store tags. (in days)",
-            namespace='storage',
+            namespace='vector_storage',
             setting_key='tag_recalculation_frequency',
             setting_value=7,
             scope=self,
@@ -354,7 +361,7 @@ class StorageManagerStack(Stack):
 
         self.rebalance_top_tags_percentage = GlobalSetting(
             description="The percentage of top tags to use when rebalancing a vector store.",
-            namespace='storage',
+            namespace='vector_storage',
             setting_key='rebalance_top_tags_percentage',
             setting_value=10,
             scope=self,
@@ -363,7 +370,7 @@ class StorageManagerStack(Stack):
 
         self.rebalance_tag_match_threshold_percentage = GlobalSetting(
             description="The percentage of tags that must match an entry when rebalancing a vector store.",
-            namespace='storage',
+            namespace='vector_storage',
             setting_key='rebalance_tag_match_threshold_percentage',
             setting_value=40,
             scope=self,

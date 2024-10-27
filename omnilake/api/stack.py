@@ -20,7 +20,7 @@ from omnilake.tables.information_requests.stack import InformationRequest, Infor
 from omnilake.tables.jobs.stack import Job, JobsTable
 from omnilake.tables.sources.stack import Source, SourcesTable
 
-from omnilake.services.storage.stack import StorageManagerStack
+from omnilake.services.storage.raw.stack import RawStorageManagerStack
 
 
 class OmniLakeAPIStack(Stack):
@@ -47,8 +47,8 @@ class OmniLakeAPIStack(Stack):
                 EntriesTable,
                 InformationRequestsTable,
                 JobsTable,
+                RawStorageManagerStack,
                 SourcesTable,
-                StorageManagerStack,
             ],
             deployment_id=deployment_id,
             scope=scope,

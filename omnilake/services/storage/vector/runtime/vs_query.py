@@ -144,7 +144,7 @@ class VectorStorageSearch:
         """
         Entry point for the query API Lambda function.
         """
-        storage_bucket_name = setting_value(namespace='storage', setting_key='vector_store_bucket')
+        storage_bucket_name = setting_value(namespace='vector_storage', setting_key='vector_store_bucket')
 
         db = lancedb.connect(f's3://{storage_bucket_name}')
 
@@ -163,7 +163,7 @@ class VectorStorageSearch:
         return asyncio.run(async_load_results(db, vector_store_names, query, result_limits_per_kb, use_ft_search))
 
 
-@fn_event_response(exception_reporter=ExceptionReporter(), logger=Logger("omnilake.services.storage.vector_storage_query"),
+@fn_event_response(exception_reporter=ExceptionReporter(), logger=Logger("omnilake.storage.vector.vector_storage_query"),
                    function_name="vector_storage_query")
 def handler(event: Dict, context: Dict):
     """

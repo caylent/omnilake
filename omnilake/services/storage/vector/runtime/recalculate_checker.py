@@ -16,7 +16,7 @@ from omnilake.tables.vector_stores.client import VectorStoresScanDefinition, Vec
 
 
 
-@fn_exception_reporter(function_name='recalculate_checker', logger=Logger('omnilake.storage.recalculate_checker'))
+@fn_exception_reporter(function_name='recalculate_checker', logger=Logger('omnilake.storage.vector.recalculate_checker'))
 def recalculate_checker(event: Dict, context: Dict):
     """
     Check for vector stores that have not been recalculated in a while and submit them for recalculation.
@@ -25,7 +25,7 @@ def recalculate_checker(event: Dict, context: Dict):
     event -- The event that triggered the function.
     context -- The context of the function.
     """
-    recalculation_freq_days = setting_value(namespace='storage', setting_key='tag_recalculation_frequency')
+    recalculation_freq_days = setting_value(namespace='vector_storage', setting_key='tag_recalculation_frequency')
 
     older_than = datetime.now(tz=utc_tz) - timedelta(days=recalculation_freq_days)
 

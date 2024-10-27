@@ -8,7 +8,6 @@ from datetime import datetime, UTC as utc_tz
 from typing import Dict
 
 
-from da_vinci.core.global_settings import setting_value
 from da_vinci.core.logging import Logger
 
 from da_vinci.event_bus.client import fn_event_response
@@ -57,7 +56,7 @@ def job_from_identifier_str(identifier: str):
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name='end_maintenance_mode',
-                     logger=Logger('omnilake.storage.end_maintenance_mode'))
+                     logger=Logger('omnilake.storage.vector.end_maintenance_mode'))
 def end_maintenance_mode(event: Dict, context: Dict):
     """
     Event handler for taking an archive out of maintenance mode.
@@ -105,7 +104,7 @@ def end_maintenance_mode(event: Dict, context: Dict):
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name='begin_maintenance_mode',
-                   logger=Logger('omnilake.storage.begin_maintenance_mode'))
+                   logger=Logger('omnilake.storage.vector.begin_maintenance_mode'))
 def begin_maintenance_mode(event: Dict, context: Dict):
     """
     Event handler for putting an archive into maintenance mode.

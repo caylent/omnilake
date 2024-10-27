@@ -22,14 +22,26 @@ from omnilake.internal_lib.event_definitions import (
     VSQueryBody,
 )
 
+from omnilake.tables.archives.client import ArchivesClient, ArchiveStatus
 from omnilake.tables.jobs.client import Job, JobsClient, JobStatus
 from omnilake.tables.vector_store_queries.client import VectorStoreQuery, VectorStoreQueryClient
 
-from omnilake.services.storage.runtime.vector_storage import choose_vector_stores
+from omnilake.services.storage.vector.runtime.vector_storage import choose_vector_stores
+
+
+def _archive_available_for_query(archive_id: str) -> bool:
+    """
+    Check if the archive is available for querying
+    """
+    archives = ArchivesClient()
+
+    archive = archives.get(archive_id=archive_id)
+
+    return archive.status == ArchiveStatus.ACTIVE
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name='query_request',
-                   logger=Logger('omnilake.services.storage.query_request'))
+                   logger=Logger('omnilake.storage.vector.query_request'))
 def handler(event: Dict, context: Dict):
     """
     Handle the query request
@@ -43,6 +55,23 @@ def handler(event: Dict, context: Dict):
     source_event = EventBusEvent.from_lambda_event(event)
 
     event_body = QueryRequestBody(**source_event.body)
+
+    if not _archive_available_for_query(event_body.archive_id):
+        logging.info(f'Archive {event_body.archive_id} is not available for querying ... delaying request')
+
+        event_publisher = EventPublisher()
+
+        query_delay = setting_value(namespace='vector_storage', setting_key='query_delay')
+
+        event_publisher.submit(
+            event=EventBusEvent(
+                body=event_body.to_dict(),
+                event_type=source_event.event_type,
+            ),
+            delay=query_delay,
+        )
+
+        return
 
     jobs = JobsClient()
 
@@ -99,7 +128,7 @@ def handler(event: Dict, context: Dict):
 
     logging.debug(f'Found vector stores: {vector_store_search_list}')
 
-    max_vector_store_search_group_size = setting_value(namespace='storage', setting_key='max_vector_store_search_group_size')
+    max_vector_store_search_group_size = setting_value(namespace='vector_storage', setting_key='max_vector_store_search_group_size')
 
     grouper_fn = lambda lst, n: [lst[i:i + n] for i in range(0, len(lst), n)]
 

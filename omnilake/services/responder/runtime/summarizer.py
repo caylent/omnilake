@@ -1,5 +1,5 @@
 '''
-Compacts the content into a more concise form.
+Summarizes the content into a more concise form.
 '''
 import logging
 
@@ -20,7 +20,7 @@ from omnilake.internal_lib.clients import RawStorageManager
 from omnilake.internal_lib.event_definitions import GenericEventBody
 from omnilake.internal_lib.naming import OmniLakeResourceName, EntryResourceName
 
-from omnilake.tables.compaction_jobs.client import CompactionJobsTableClient
+from omnilake.tables.summary_jobs.client import SummaryJobsTableClient
 from omnilake.tables.entries.client import Entry, EntriesClient
 from omnilake.tables.jobs.client import JobsClient, JobStatus
 from omnilake.tables.information_requests.client import InformationRequestsClient
@@ -29,30 +29,30 @@ from omnilake.services.responder.runtime.response import FinalResponseEventBody
 
 
 @dataclass
-class CompactionCompleted(GenericEventBody):
+class SummarizationCompleted(GenericEventBody):
     '''
-    Event body for compaction completion.
+    Event body for summary completion.
     '''
     request_id: str # The Information Request ID that this context is associated with.
-    resource_name: str # The name of the resource that was compacted.
+    resource_name: str # The name of the resource that was summarized.
     parent_job_id: str # The parent job ID.
     parent_job_type: str # The parent job type.
 
 
 @dataclass
-class CompactionRequest(GenericEventBody):
+class SummarizationRequest(GenericEventBody):
     '''
-    Event body for compaction request.
+    Event body for summary request.
     '''
     request_id: str # The Information Request ID that this context is associated with.
-    resource_names: List[str] # The names of the resources to compact.
+    resource_names: List[str] # The names of the resources to summary.
     parent_job_id: str # The parent job ID.
     parent_job_type: str # The parent job type.
     goal: str = None # The user goal.
 
 
-class CompactionPrompt:
-    NO_GOAL_PROMPT = """You are an AI assistant designed to compact data by extracting key facts and insights from given content. Your primary goal is to distill information to its most essential elements. Follow these steps:
+class SummaryPrompt:
+    NO_GOAL_PROMPT = """You are an AI assistant designed to summarize data by extracting key facts and insights from given content. Your primary goal is to distill information to its most essential elements. Follow these steps:
 
 - Scan the entire content to grasp its overall scope.
 - Identify and extract:
@@ -68,11 +68,11 @@ class CompactionPrompt:
 Your output should be a highly condensed version of the original content, retaining only the most crucial facts and insights. Aim for maximum information density while maintaining clarity and accuracy. 
 """
 
-    WITH_GOAL_PROMPT = """You are an AI assistant designed to compact data by extracting key facts and insights from given content, with a specific focus on the user's stated goal. Your primary objective is to distill information to its most essential and relevant elements. Follow these steps:
+    WITH_GOAL_PROMPT = """You are an AI assistant designed to summarize data by extracting key facts and insights from given content, with a specific focus on the user's stated goal. Your primary objective is to distill information to its most essential and relevant elements. Follow these steps:
 
 - Carefully review the user's stated goal.
 - Scan the entire content to identify information relevant to the user's needs.
-- Extract and compact only the following elements that directly relate to the user's request and goal:
+- Extract and summarize only the following elements that directly relate to the user's request and goal:
     - Core facts and statistics
     - Key insights or conclusions
     - Essential data points
@@ -132,7 +132,7 @@ Your output should be a highly condensed, goal-oriented version of the original 
 
     def generate(self) -> str:
         '''
-        Generates the compaction prompt.
+        Generates the summarize prompt.
         '''
         prompt = self.NO_GOAL_PROMPT
 
@@ -156,60 +156,60 @@ Your output should be a highly condensed, goal-oriented version of the original 
         return self.generate()
 
 
-@fn_event_response(exception_reporter=ExceptionReporter(), function_name="compaction_watcher",
-                   logger=Logger("omnilake.services.responder.compaction_watcher"))
-def compaction_watcher(event: Dict, context: Dict):
+@fn_event_response(exception_reporter=ExceptionReporter(), function_name="response_summary_watcher",
+                   logger=Logger("omnilake.services.responder.summary_watcher"))
+def summary_watcher(event: Dict, context: Dict):
     '''
-    Watches for compaction events and triggers the compaction process.
+    Watches for summary events and triggers the summary process.
     '''
     logging.debug(f'Recieved request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
-    event_body = CompactionCompleted(**source_event.body)
+    event_body = SummarizationCompleted(**source_event.body)
 
-    compaction_jobs = CompactionJobsTableClient()
+    summary_jobs = SummaryJobsTableClient()
 
-    compaction_jobs.add_completed_resource(
+    summary_jobs.add_completed_resource(
         request_id=event_body.request_id,
         resource_name=event_body.resource_name,
     )
 
-    compaction_job = compaction_jobs.get(request_id=event_body.request_id, consistent_read=True)
+    summarization_job = summary_jobs.get(request_id=event_body.request_id, consistent_read=True)
 
     event_bus = EventPublisher()
 
-    if compaction_job.remaining_processes != 0:
-        logging.debug(f'Compaction job {compaction_job.request_id} still has {compaction_job.remaining_processes} remaining processes.')
+    if summarization_job.remaining_processes != 0:
+        logging.debug(f'Summary job {summarization_job.request_id} still has {summarization_job.remaining_processes} remaining processes.')
         return
 
-    if len(compaction_job.current_run_completed_resource_names) == 1:
-        logging.info(f'Compaction job {compaction_job.request_id} has completed all processes.')
+    if len(summarization_job.current_run_completed_resource_names) == 1:
+        logging.info(f'summary job {summarization_job.request_id} has completed all processes.')
 
         event_bus.submit(
             event=EventBusEvent(
                 body=FinalResponseEventBody(
                     request_id=event_body.request_id,
-                    source_resource_name=list(compaction_job.current_run_completed_resource_names)[0],
-                    parent_job_id=compaction_job.parent_job_id,
-                    parent_job_type=compaction_job.parent_job_type,
+                    source_resource_name=list(summarization_job.current_run_completed_resource_names)[0],
+                    parent_job_id=summarization_job.parent_job_id,
+                    parent_job_type=summarization_job.parent_job_type,
                 ).to_dict(),
                 event_type="final_response",
             )
         )
 
-        logging.info(f'Final response event submitted for compaction job {compaction_job.request_id}.')
+        logging.info(f'Final response event submitted for summary job {summarization_job.request_id}.')
 
         return
 
-    maximum_recursion_depth = setting_value(namespace="responder", setting_key="compaction_maximum_recursion_depth")
+    maximum_recursion_depth = setting_value(namespace="responder", setting_key="summary_maximum_recursion_depth")
 
-    if compaction_job.current_run > maximum_recursion_depth:
-        raise Exception(f'Compaction job {compaction_job.request_id} has exceeded the maximum recursion depth.')
+    if summarization_job.current_run > maximum_recursion_depth:
+        raise Exception(f'Summary job {summarization_job.request_id} has exceeded the maximum recursion depth.')
 
-    compaction_job.current_run += 1
+    summarization_job.current_run += 1
 
-    latest_completed_resources_lst = list(compaction_job.current_run_completed_resource_names)
+    latest_completed_resources_lst = list(summarization_job.current_run_completed_resource_names)
 
     max_content_group_size = setting_value(namespace="responder", setting_key="max_content_group_size")
 
@@ -217,9 +217,9 @@ def compaction_watcher(event: Dict, context: Dict):
     # Plus it's a fish ... Grouper ... I'll see myself out.
     grouper = lambda lst, n: [lst[i:i + n] for i in range(0, len(lst), n)]
 
-    compaction_groups = grouper(latest_completed_resources_lst, max_content_group_size)
+    summary_groups = grouper(latest_completed_resources_lst, max_content_group_size)
 
-    logging.debug(f'Compaction groups: {compaction_groups}')
+    logging.debug(f'Summary groups: {summary_groups}')
 
     processes = 0
 
@@ -227,51 +227,51 @@ def compaction_watcher(event: Dict, context: Dict):
 
     information_request = information_requests.get(request_id=event_body.request_id)
 
-    compaction_job.current_run_completed_resource_names = set()
+    summarization_job.current_run_completed_resource_names = set()
 
-    for group in compaction_groups:
+    for group in summary_groups:
         if len(group) == 1:
             logging.debug(f'Group of 1, adding directly to finished resources.')
 
-            compaction_job.current_run_completed_resource_names.add(group[0])
+            summarization_job.current_run_completed_resource_names.add(group[0])
 
             continue
 
-        logging.debug(f'Group of {len(group)} resources, submitting for compaction.')
+        logging.debug(f'Group of {len(group)} resources, submitting for summarization.')
 
         processes += 1
 
         event_bus.submit(
             event=EventBusEvent(
-                body=CompactionRequest(
+                body=SummarizationRequest(
                     request_id=event_body.request_id,
                     resource_names=list(group),
                     goal=information_request.goal,
-                    parent_job_id=compaction_job.parent_job_id,
-                    parent_job_type=compaction_job.parent_job_type,
+                    parent_job_id=summarization_job.parent_job_id,
+                    parent_job_type=summarization_job.parent_job_type,
                 ).to_dict(),
-                event_type="begin_compaction",
+                event_type="begin_summarization",
             )
         )
 
-    compaction_job.remaining_processes = processes
+    summarization_job.remaining_processes = processes
 
-    compaction_jobs.put(compaction_job)
+    summary_jobs.put(summarization_job)
 
 
-@fn_event_response(exception_reporter=ExceptionReporter(), function_name="compact_resources",
-                   logger=Logger("omnilake.services.responder.resource_compaction"))
-def compact_resources(event: Dict, context: Dict):
+@fn_event_response(exception_reporter=ExceptionReporter(), function_name="summarize_resources",
+                   logger=Logger("omnilake.services.responder.resource_summarizer"))
+def summarize_resources(event: Dict, context: Dict):
     '''
-    Compacts the content of the resources.
+    Summarizes the content of the resources.
     '''
     logging.debug(f'Recieved request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
-    event_body = CompactionRequest(**source_event.body)
+    event_body = SummarizationRequest(**source_event.body)
 
-    compaction_prompt = CompactionPrompt(
+    summary_prompt = SummaryPrompt(
         goal=event_body.goal,
         resource_names=event_body.resource_names
     )
@@ -280,36 +280,36 @@ def compact_resources(event: Dict, context: Dict):
 
     parent_job = jobs.get(job_type=event_body.parent_job_type, job_id=event_body.parent_job_id)
 
-    child_job = parent_job.create_child(job_type="DATA_COMPACTION")
+    child_job = parent_job.create_child(job_type="DATA_SUMMARIZATION")
 
     jobs.put(child_job)
 
     jobs.put(parent_job)
 
-    with jobs.job_execution(parent_job, failure_status_message="Compaction job failed", skip_completion=True):
+    with jobs.job_execution(parent_job, failure_status_message="Summary job failed", skip_completion=True):
 
-        with jobs.job_execution(child_job, failure_status_message="Compaction job failed"):
-            logging.debug(f'Compacting resources: {event_body.resource_names}')
+        with jobs.job_execution(child_job, failure_status_message="Summary job failed"):
+            logging.debug(f'Summarizing resources: {event_body.resource_names}')
 
-            prompt = compaction_prompt.to_str()
+            prompt = summary_prompt.to_str()
 
-            logging.debug(f'Compaction prompt: {prompt}')
+            logging.debug(f'Summary prompt: {prompt}')
 
             ai = AI(default_model_id=ModelIDs.HAIKU)
 
-            compaction_result = ai.invoke(prompt=prompt, max_tokens=8000)
+            summarization_result = ai.invoke(prompt=prompt, max_tokens=8000)
 
-            logging.debug(f'Compaction result: {compaction_result}')
+            logging.debug(f'Summarization result: {summarization_result}')
 
-            child_job.ai_statistics.invocations.append(compaction_result.statistics)
+            child_job.ai_statistics.invocations.append(summarization_result.statistics)
 
-            logging.debug(f'AI Response: {compaction_result.response}')
+            logging.debug(f'AI Response: {summarization_result.response}')
 
             entries = EntriesClient()
 
             entry = Entry(
-                char_count=len(compaction_result.response),
-                content_hash=Entry.calculate_hash(compaction_result.response),
+                char_count=len(summarization_result.response),
+                content_hash=Entry.calculate_hash(summarization_result.response),
                 effective_on=datetime.now(tz=utc_tz),
                 sources=set(event_body.resource_names),
             )
@@ -318,7 +318,7 @@ def compact_resources(event: Dict, context: Dict):
 
             raw_storage = RawStorageManager()
 
-            resp = raw_storage.save_entry(entry_id=entry.entry_id, content=compaction_result.response)
+            resp = raw_storage.save_entry(entry_id=entry.entry_id, content=summarization_result.response)
 
             logging.debug(f'Raw storage response: {resp}')
 
@@ -326,12 +326,12 @@ def compact_resources(event: Dict, context: Dict):
 
     event_bus.submit(
         event=EventBusEvent(
-            body=CompactionCompleted(
+            body=SummarizationCompleted(
                 request_id=event_body.request_id,
                 resource_name=str(EntryResourceName(resource_id=entry.entry_id)),
                 parent_job_id=event_body.parent_job_id,
                 parent_job_type=event_body.parent_job_type,
             ).to_dict(),
-            event_type="compaction_completed",
+            event_type="summary_completed",
         )
     )

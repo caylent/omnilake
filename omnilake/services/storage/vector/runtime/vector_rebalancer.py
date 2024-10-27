@@ -26,12 +26,12 @@ from omnilake.tables.vector_stores.client import VectorStore, VectorStoresClient
 from omnilake.tables.vector_store_tags.client import VectorStoreTagsClient
 from omnilake.tables.vector_store_chunks.client import VectorStoreChunksClient
 
-from omnilake.services.storage.runtime.maintenance import (
+from omnilake.services.storage.vector.runtime.maintenance import (
     RequestMaintenanceModeBegin,
     RequestMaintenanceModeEnd,
 )
 
-from omnilake.services.storage.runtime.vector_storage import DocumentChunk, calculate_tag_match_percentage
+from omnilake.services.storage.vector.runtime.vector_storage import DocumentChunk, calculate_tag_match_percentage
 
 
 @dataclass
@@ -79,7 +79,7 @@ def find_matching_entries(entry_search_list: List[Entry], target_tags: List[str]
     entry_search_list -- The list of entries to search
     target_tags -- The list of tags to match
     """
-    match_threshold = setting_value(namespace='storage', setting_key='rebalance_tag_match_threshold_percentage')
+    match_threshold = setting_value(namespace='vector_storage', setting_key='rebalance_tag_match_threshold_percentage')
 
     matching_entries = []
 
@@ -95,7 +95,7 @@ def find_matching_entries(entry_search_list: List[Entry], target_tags: List[str]
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name='vector_rebalancer',
-                   logger=Logger('omnilake.storage.vector_rebalancer'))
+                   logger=Logger('omnilake.storage.vector.vector_rebalancer'))
 def handler(event: Dict, context: Dict):
     """
     Lambda handler for rebalancing a vector store.
@@ -150,7 +150,7 @@ def handler(event: Dict, context: Dict):
 
     tags_client = VectorStoreTagsClient()
 
-    top_tags_percentage = setting_value(namespace='storage', setting_key='rebalance_top_tags_percentage')
+    top_tags_percentage = setting_value(namespace='vector_storage', setting_key='rebalance_top_tags_percentage')
 
     results = tags_client.get_top_n_percent_tags(
         archive_id=event_body.archive_id,
@@ -192,7 +192,7 @@ def handler(event: Dict, context: Dict):
         )
     )
 
-    vector_bucket = setting_value(namespace='storage', setting_key='vector_store_bucket')
+    vector_bucket = setting_value(namespace='vector_storage', setting_key='vector_store_bucket')
 
     new_vector_store = create_new_vector_store(event_body.archive_id, vector_bucket)
 

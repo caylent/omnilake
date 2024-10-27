@@ -1,6 +1,5 @@
 '''
 Manages the raw data storage for the runtime
-
 '''
 import boto3
 

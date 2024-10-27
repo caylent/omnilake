@@ -111,6 +111,41 @@ class InformationRequest(TableObject):
             description='The date and time the information response was completed.',
             optional=True,
         ),
+
+        TableObjectAttribute(
+            name='responder_model_id',
+            attribute_type=TableObjectAttributeType.STRING,
+            description='The model ID used by the final responder.',
+            optional=True,
+        ),
+
+        TableObjectAttribute(
+            name='responder_prompt',
+            attribute_type=TableObjectAttributeType.STRING,
+            description='The prompt used by the final responder.',
+            optional=True,
+        ),
+
+        TableObjectAttribute(
+            name='summarization_algorithm',
+            attribute_type=TableObjectAttributeType.STRING,
+            description='The summarization algorithm used for the information request.',
+            default='STANDARD',
+        ),
+
+        TableObjectAttribute(
+            name='summarization_model_id',
+            attribute_type=TableObjectAttributeType.STRING,
+            description='The model ID used for summarization system',
+            optional=True,
+        ),
+
+        TableObjectAttribute(
+            name='summarization_prompt',
+            attribute_type=TableObjectAttributeType.STRING,
+            description='The prompt used for summarization system',
+            optional=True,
+        ),
     ]
 
 

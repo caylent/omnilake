@@ -21,7 +21,7 @@ from omnilake.tables.entries.stack import Entry, EntriesTable
 from omnilake.tables.jobs.stack import Job, JobsTable
 from omnilake.tables.sources.stack import Source, SourcesTable
 
-from omnilake.services.storage.stack import StorageManagerStack
+from omnilake.services.storage.raw.stack import RawStorageManagerStack
 
 
 class IngestionServiceStack(Stack):
@@ -48,7 +48,7 @@ class IngestionServiceStack(Stack):
                 EventBusStack,
                 JobsTable,
                 SourcesTable,
-                StorageManagerStack,
+                RawStorageManagerStack,
             ],
             deployment_id=deployment_id,
             scope=scope,

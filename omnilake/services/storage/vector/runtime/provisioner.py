@@ -28,10 +28,10 @@ from omnilake.tables.vector_stores.client import (
     VectorStoresClient,
 )
 
-from omnilake.services.storage.runtime.vector_storage import DocumentChunk
+from omnilake.services.storage.vector.runtime.vector_storage import DocumentChunk
 
 
-@fn_event_response(exception_reporter=ExceptionReporter(), function_name='storage_provisioner', logger=Logger('omnilake.storage.provisioner'))
+@fn_event_response(exception_reporter=ExceptionReporter(), function_name='storage_provisioner', logger=Logger('omnilake.storage.vector.provisioner'))
 def handler(event: Dict, context: Dict) -> Dict:
     """
     Provisions a new archive, creating the initial vector store and archive record
@@ -55,7 +55,7 @@ def handler(event: Dict, context: Dict) -> Dict:
 
     jobs.put(job)
 
-    vector_bucket = setting_value(namespace='storage', setting_key='vector_store_bucket')
+    vector_bucket = setting_value(namespace='vector_storage', setting_key='vector_store_bucket')
 
     db = lancedb.connect(f's3://{vector_bucket}')
 

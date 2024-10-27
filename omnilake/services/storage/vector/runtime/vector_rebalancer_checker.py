@@ -15,10 +15,10 @@ from da_vinci.event_bus.event import Event as EventBusEvent
 from omnilake.tables.jobs.client import Job, JobsClient, JobStatus
 from omnilake.tables.vector_stores.client import VectorStoresClient
 
-from omnilake.services.storage.runtime.vector_rebalancer import VectorStoreRebalancing
+from omnilake.services.storage.vector.runtime.vector_rebalancer import VectorStoreRebalancing
 
 
-@fn_exception_reporter(function_name='vector_rebalance_checker', logger=Logger('omnilake.storage.vector_rebalance_checker'))
+@fn_exception_reporter(function_name='vector_rebalance_checker', logger=Logger('omnilake.storage.vector.vector_rebalance_checker'))
 def rebalance_checker(event: Dict, context: Dict):
     """
     Check for vector stores that should be rebalanced based on setting definitions.
@@ -33,9 +33,9 @@ def rebalance_checker(event: Dict, context: Dict):
 
     jobs_client.put(job)
 
-    max_entries_rebalance_threshold = setting_value(namespace="storage", setting_key="max_entries_rebalance_threshold")
+    max_entries_rebalance_threshold = setting_value(namespace="vector_storage", setting_key="max_entries_rebalance_threshold")
 
-    max_entries_per_vector_store = setting_value(namespace="storage", setting_key="max_entries_per_vector")
+    max_entries_per_vector_store = setting_value(namespace="vector_storage", setting_key="max_entries_per_vector")
 
     min_inside_threshold = (max_entries_per_vector_store * (max_entries_rebalance_threshold * 0.01))
 

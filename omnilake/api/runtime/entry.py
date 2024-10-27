@@ -2,7 +2,7 @@
 Contains the EntriesAPI class, which is a child API of the OmniLakeAPI class.
 '''
 from datetime import datetime
-from typing import List, Union
+from typing import List, Optional, Union
 
 from da_vinci.event_bus.client import EventPublisher
 from da_vinci.event_bus.event import Event as EventBusEvent
@@ -52,8 +52,8 @@ class EntriesAPI(ChildAPI):
         ),
     ]
 
-    def add_entry(self, archive_id: str, content: str, sources: List[str], effective_on: Union[datetime, str] = None,
-                  original: str = None, summarize: bool = False):
+    def add_entry(self, content: str, sources: List[str], archive_id: Optional[str] = None,
+                  effective_on: Union[datetime, str] = None, original: str = None, summarize: bool = False):
         """
         Add an entry, idempotent
 
@@ -65,17 +65,18 @@ class EntriesAPI(ChildAPI):
         original -- The original entry, optional
         summarize -- Whether to summarize the entry, optional
         """
-        archives = ArchivesClient()
+        if archive_id:
+            archives = ArchivesClient()
 
-        archive = archives.get(
-            archive_id=archive_id,
-        )
-
-        if not archive:
-            return self.respond(
-                body={"message": "No such archive"},
-                status_code=400,
+            archive = archives.get(
+                archive_id=archive_id,
             )
+
+            if not archive:
+                return self.respond(
+                    body={"message": "No such archive"},
+                    status_code=400,
+                )
 
         jobs = JobsClient()
 

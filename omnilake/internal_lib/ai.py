@@ -1,8 +1,11 @@
+import json
+import logging
+
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Optional
 
-from anthropic import AnthropicBedrock
+import boto3
 
 from omnilake.tables.jobs.client import AIInvocationStatistics
 
@@ -30,7 +33,7 @@ class AI:
         """
         Initialize the AI service.
         """
-        self.anthropic = AnthropicBedrock()
+        self.bedrock = boto3.client(service_name='bedrock-runtime')
 
         self.default_model_id = default_model_id
 
@@ -50,18 +53,32 @@ class AI:
         if not model_id:
             model_id = self.default_model_id
 
-        response = self.anthropic.messages.create(
-            model=model_id,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=max_tokens,
-            **invocation_kwargs
+        invocation_body = invocation_kwargs or {}
+
+        invocation_body['anthropic_version'] = 'bedrock-2023-05-31'
+
+        invocation_body['max_tokens'] = max_tokens
+
+        invocation_body['messages'] = [{"role": "user", "content": prompt}]
+
+        logging.info(f"Invoking Bedrock model {model_id} with: {invocation_body}")
+
+        response = self.bedrock.invoke_model(
+            modelId=model_id,
+            contentType="application/json",
+            accept="application/json",
+            body=json.dumps(invocation_body)
         )
 
+        logging.info(f"Received response from Bedrock model {model_id}: {response}")
+
+        response_body = json.loads(response['body'].read())
+
         return AIInvocationResponse(
-            response=response.content[0].text,
+            response=response_body['content'][0]['text'],
             statistics=AIInvocationStatistics(
                 model_id=model_id,
-                input_tokens=response.usage.input_tokens,
-                output_tokens=response.usage.output_tokens,
+                input_tokens=response_body['usage']['input_tokens'],
+                output_tokens=response_body['usage']['output_tokens'],
             )
         )

@@ -34,7 +34,7 @@ class VectorStoreTagRecalculationFinished(GenericEventBody):
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name='recalculate_vector_tags',
-                   logger=Logger('omnilake.storage.recalculate_vector_tags'))
+                   logger=Logger('omnilake.storage.vector.recalculate_vector_tags'))
 def handler(event: Dict, context: Dict):
     """
     Lambda handler for recalculate_vector_tags.
@@ -60,7 +60,7 @@ def handler(event: Dict, context: Dict):
 
         vector_store = vector_stores.get(archive_id=event_body.archive_id, vector_store_id=event_body.vector_store_id)
 
-        vector_bucket = setting_value(namespace='storage', setting_key='vector_store_bucket')
+        vector_bucket = setting_value(namespace='vector_storage', setting_key='vector_store_bucket')
 
         # Connect to the vector store bucket
         db = lancedb.connect(f's3://{vector_bucket}')

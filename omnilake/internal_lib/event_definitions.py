@@ -1,7 +1,7 @@
 
 
 from dataclasses import asdict, dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from omnilake.internal_lib.job_types import JobType
 
@@ -56,6 +56,11 @@ class InformationRequestBody(GenericEventBody):
     job_type: str = JobType.INFORMATION_REQUEST
     request_stage: str = 'INITIAL'
     resource_names: List[str] = None
+    responder_model_id: Optional[str] = None
+    responder_prompt: Optional[str] = None
+    summarization_algorithm: Optional[str] = None
+    summarization_prompt: Optional[str] = None
+    summarization_model_id: Optional[str] = None
     event_type: str = 'start_information_request'
 
 

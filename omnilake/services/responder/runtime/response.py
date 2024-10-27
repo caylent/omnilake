@@ -29,9 +29,6 @@ from omnilake.tables.information_requests.client import (
     InformationRequestStatus,
 )
 
-# TODO: Temporary import, need to address a more maintainable solution in the future. BAD JIM!
-from omnilake.services.ingestion.runtime.entry_creation import extract_insights
-
 
 class ResponsePrompt:
     """
@@ -160,21 +157,12 @@ def final_responder(event: Dict, context: Dict) -> None:
 
             logging.debug(f'AI Response: {final_response.response}')
 
-            #extract insights
-            insights, insight_invocation_resp = extract_insights(final_response.response)
-
-            final_resp_job.ai_statistics.invocations.append(insight_invocation_resp.statistics)
-
             entries = EntriesClient()
 
             entry = Entry(
-                analysis_scores={
-                    'completeness': insights['completeness_score'],
-                },
                 content_hash=Entry.calculate_hash(final_response.response),
                 effective_on=datetime.now(tz=utc_tz),
                 sources=set([event_body.source_resource_name]),
-                tags=[tag.lower().strip() for tag in insights['tags'].split(',')],
             )
 
             entries.put(entry)

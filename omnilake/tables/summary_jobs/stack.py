@@ -3,10 +3,10 @@ from constructs import Construct
 from da_vinci_cdk.constructs.dynamodb import DynamoDBTable
 from da_vinci_cdk.stack import Stack
 
-from omnilake.tables.compaction_jobs.client import CompactionJob
+from omnilake.tables.summary_jobs.client import SummaryJob
 
 
-class CompactionJobsTable(Stack):
+class SummaryJobsTable(Stack):
     def __init__(self, app_name: str, deployment_id: str,
                  scope: Construct, stack_name: str):
         super().__init__(
@@ -18,5 +18,5 @@ class CompactionJobsTable(Stack):
 
         self.table = DynamoDBTable.from_orm_table_object(
             scope=self,
-            table_object=CompactionJob,
+            table_object=SummaryJob,
         )

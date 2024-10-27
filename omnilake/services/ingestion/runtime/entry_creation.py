@@ -65,84 +65,6 @@ CONTENT:
     return result
 
 
-def extract_insights(content: str) -> Tuple[Dict, AIInvocationResponse]:
-    """
-    Uses AI to extract insights from the content.
-
-    Keyword arguments:
-    content -- The content to extract insights from
-    """
-    ai = AI()
-
-    response_definition = AIResponseDefinition(
-        insights=[
-            AIResponseInsightDefinition(
-                name="completeness_score",
-                definition="""Please evaluate the provided document for its completeness of information. Focus on the following aspects:
-
-- Definitions: Are key terms, especially non-standard or domain-specific ones, clearly defined?
-- Abbreviations: Are all abbreviations and acronyms explained?
-- Context: Is sufficient background information provided for understanding the content?
-- Depth: Are concepts explored thoroughly, or are they only superficially mentioned?
-- Clarity: Is the information presented in a clear, understandable manner?
-
-Based on these criteria, assign a score of LOW, MEDIUM, or HIGH:
-
-- LOW: The document lacks many definitions, leaves abbreviations unexplained, provides little context, explores concepts superficially, or is unclear in its presentation.
-- MEDIUM: The document defines some key terms, explains most abbreviations, provides some context, explores concepts with moderate depth, and is generally clear.
-- HIGH: The document thoroughly defines all key terms, explains all abbreviations, provides comprehensive context, explores concepts in-depth, and presents information with exceptional clarity.
-
-Please provide only the score (LOW, MEDIUM, or HIGH) without any additional justification.""",
-            ),
-            AIResponseInsightDefinition(
-                name="tags",
-                definition="""Extract relevant tags from the given content, focusing on:
-
-- Proper names (people, places, organizations, products)
-- Specific categories or themes
-- Key concepts or topics
-- Business categories or industries
-- Subjects or disciplines (e.g., science, history, art)
-- Time periods or eras
-- Emotions or sentiments expressed
-- Technical terms or jargon
-- Cultural references
-- Target audience or demographic
-
-Guidelines:
-
-- Provide tags as a comma-separated list
-- Include both specific and broader tags where appropriate
-- Aim for concise, descriptive tags (1-3 words each)
-- Prioritize tags that would be most useful for categorization or search purposes
-- Consider the context and main focus of the content when selecting tags
-- If applicable, include tags in different languages that are relevant to the content
-- Aim to capture the main themes rather than every minor detail
-
-Tagging approach:
-
-- First, read through the entire content to understand the overall context
-- Identify the primary topic or theme
-- Extract tags based on the categories listed above
-- Review and refine the tag list, ensuring a balanced representation of the content""",
-            ),
-        ]
-    )
-
-    prompt = response_definition.to_prompt(content)
-
-    result = ai.invoke(
-        model_id=ModelIDs.HAIKU,
-        prompt=prompt,
-    )
-
-    parser = ResponseParser()
-
-    parser.feed(result.response)
-
-    return parser.parsed_insights(), result
-
-
 class SourceValidateException(Exception):
     def __init__(self, resource_name: str, reason: str):
         super().__init__(f"Unable to validate source existence for \"{resource_name}\": {reason}")
@@ -218,40 +140,25 @@ def handler(event: Dict, context: Dict):
         with jobs.job_execution(source_validation_job, failure_status_message='Failed to validate sources'):
             _validate_sources(event_body.sources)
 
-        insight_extraction_job = job.create_child(job_type='EXTRACT_ENTRY_INSIGHTS')
-
         jobs.put(job)
 
-        with jobs.job_execution(insight_extraction_job, failure_status_message='Failed to extract insights'):
-            insights, invocation_resp = extract_insights(event_body.content)
+        entry = Entry(
+            char_count=len(event_body.content),
+            content_hash=Entry.calculate_hash(event_body.content),
+            effective_on=event_body.effective_on,
+            original_of_source_id=event_body.original,
+            sources=set(event_body.sources),
+        )
 
-            logging.debug(f"Invocation response: {invocation_resp}")
+        entries = EntriesClient()
 
-            insight_extraction_job.ai_statistics.invocations.append(invocation_resp.statistics)
+        entries.put(entry)
 
-            logging.debug(f"Extracted insights: {insights}")
+        storage_mgr = RawStorageManager()
 
-            entry = Entry(
-                analysis_scores={
-                    'completeness': insights['completeness_score'],
-                },
-                char_count=len(event_body.content),
-                content_hash=Entry.calculate_hash(event_body.content),
-                effective_on=event_body.effective_on,
-                original_of_source_id=event_body.original,
-                sources=set(event_body.sources),
-                tags=[tag.lower().strip() for tag in insights['tags'].split(',')],
-            )
+        res = storage_mgr.save_entry(entry_id=entry.entry_id, content=event_body.content)
 
-            entries = EntriesClient()
-
-            entries.put(entry)
-
-            storage_mgr = RawStorageManager()
-
-            res = storage_mgr.save_entry(entry_id=entry.entry_id, content=event_body.content)
-
-            logging.debug(f"Save entry result: {res}")
+        logging.debug(f"Save entry result: {res}")
 
     if event_body.summarize:
         summarize_job = job.create_child(job_type='SUMMARIZE_ENTRY')

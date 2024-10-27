@@ -83,7 +83,9 @@ class InformationRequestAPI(ChildAPI):
     ]
 
     def request_information(self, goal: str, requests: List[Dict], destination_archive_id: Optional[str] = None, 
-                            resource_names: Optional[List[str]] = None):
+                            resource_names: Optional[List[str]] = None, responder_model_id: Optional[str] = None,
+                            responder_prompt: Optional[str] = None, summarization_algorithm: Optional[str] = 'STANDARD',
+                            summarization_prompt: Optional[str] = None, summarization_model_id: Optional[str] = None):
         """
         Request the system to provide information
 
@@ -127,6 +129,11 @@ class InformationRequestAPI(ChildAPI):
             requests=requests,
             request_id=info_request.request_id,
             resource_names=resource_names,
+            responder_model_id=responder_model_id,
+            responder_prompt=responder_prompt,
+            summarization_algorithm=summarization_algorithm,
+            summarization_prompt=summarization_prompt,
+            summarization_model_id=summarization_model_id,
         )
 
         event = EventBusEvent(
