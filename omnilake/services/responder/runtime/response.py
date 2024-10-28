@@ -8,6 +8,7 @@ from datetime import datetime, UTC as utc_tz
 from typing import Dict
 
 from da_vinci.core.logging import Logger
+from da_vinci.core.global_settings import setting_value
 
 from da_vinci.exception_trap.client import ExceptionReporter
 
@@ -34,15 +35,6 @@ class ResponsePrompt:
     """
     Response prompt
     """
-
-    PROMPT_INSTRUCTION = """Based on the information provided, provide a response based on the desired goal.
-- The response should be clear and concise.
-- The response should be accurate based on the information provided.
-- The response should be relevant to the request.
-- Follow any specific instructions provided in the's goal.
-
-If you do not feel there is sufficient information to provide a response, simply specify "Insufficient information for response"
-"""
 
     def __init__(self, goal: str, resource_name: str):
         self._resource_name = resource_name
@@ -83,8 +75,10 @@ If you do not feel there is sufficient information to provide a response, simply
         '''
         content = self._get_resource_content(self._resource_name)
 
+        prompt = setting_value(namespace='responder', key='default_response_prompt')
+
         full_prompt_lst = [
-            self.PROMPT_INSTRUCTION,
+            prompt,
             f"\n\nGOAL:\n\n{self.goal}",
             f"\n\nCONTENT:\n\n{content}"
         ]

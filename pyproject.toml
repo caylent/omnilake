@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "OmniLake"
+name = "omnilake"
 version = "2024.9.24"
 description = "Data Lake Capabilities combined with AI to create an AWS based Intelligence Lake"
 authors = ["Jim Rosser <me@j4r.wtf>"]

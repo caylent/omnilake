@@ -16,8 +16,6 @@ from da_vinci_cdk.constructs.access_management import ResourceAccessRequest
 from da_vinci_cdk.constructs.base import resource_namer
 from da_vinci_cdk.constructs.global_setting import GlobalSetting, SettingType
 from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
-from da_vinci_cdk.constructs.lambda_function import LambdaFunction
-from da_vinci_cdk.constructs.service import SimpleRESTService
 
 from omnilake.tables.archives.stack import Archive, ArchiveTable
 from omnilake.tables.entries.stack import Entry, EntriesTable
@@ -37,6 +35,11 @@ from omnilake.tables.vector_store_chunks.stack import (
 
 from omnilake.services.storage.raw.stack import RawStorageManagerStack
 from omnilake.services.storage.vector.stack import VectorStorageManagerStack
+
+from omnilake.services.responder.default_prompts import (
+    DEFAULT_RESPONSE_PROMPT,
+    DEFAULT_SUMMARY_PROMPT,
+)
 
 class ResponderEngineStack(Stack):
     def __init__(self, app_name: str, app_base_image: str, architecture: str,
@@ -239,6 +242,24 @@ class ResponderEngineStack(Stack):
             ],
             scope=self,
             timeout=Duration.minutes(2),
+        )
+
+        self.default_summary_prompt = GlobalSetting(
+            description='The default prompt for summarization.',
+            namespace='responder',
+            setting_key='default_summary_prompt',
+            setting_value=DEFAULT_SUMMARY_PROMPT,
+            scope=self,
+            setting_type=SettingType.STRING
+        )
+
+        self.default_response_prompt = GlobalSetting(
+            description='The default prompt for responses.',
+            namespace='responder',
+            setting_key='default_response_prompt',
+            setting_value=DEFAULT_RESPONSE_PROMPT,
+            scope=self,
+            setting_type=SettingType.STRING
         )
 
         self.default_inclusive_sample_size = GlobalSetting(

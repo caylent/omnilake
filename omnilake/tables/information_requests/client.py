@@ -127,6 +127,14 @@ class InformationRequest(TableObject):
         ),
 
         TableObjectAttribute(
+            name='responder_model_params',
+            attribute_type=TableObjectAttributeType.JSON_STRING,
+            description='The parameters used for the responder model',
+            optional=True,
+            default={},
+        ),
+
+        TableObjectAttribute(
             name='summarization_algorithm',
             attribute_type=TableObjectAttributeType.STRING,
             description='The summarization algorithm used for the information request.',
@@ -145,6 +153,14 @@ class InformationRequest(TableObject):
             attribute_type=TableObjectAttributeType.STRING,
             description='The prompt used for summarization system',
             optional=True,
+        ),
+
+        TableObjectAttribute(
+            name='summarization_model_params',
+            attribute_type=TableObjectAttributeType.JSON_STRING,
+            description='The parameters used for the summarization model',
+            optional=True,
+            default={},
         ),
     ]
 

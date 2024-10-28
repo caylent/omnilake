@@ -84,8 +84,9 @@ class InformationRequestAPI(ChildAPI):
 
     def request_information(self, goal: str, requests: List[Dict], destination_archive_id: Optional[str] = None, 
                             resource_names: Optional[List[str]] = None, responder_model_id: Optional[str] = None,
-                            responder_prompt: Optional[str] = None, summarization_algorithm: Optional[str] = 'STANDARD',
-                            summarization_prompt: Optional[str] = None, summarization_model_id: Optional[str] = None):
+                            responder_prompt: Optional[str] = None, responder_model_params: Optional[Dict] = None,
+                            summarization_algorithm: Optional[str] = 'STANDARD', summarization_prompt: Optional[str] = None,
+                            summarization_model_id: Optional[str] = None, summarization_model_params: Optional[Dict] = None):
         """
         Request the system to provide information
 
@@ -117,6 +118,13 @@ class InformationRequestAPI(ChildAPI):
             job_id=job.job_id,
             job_type=job.job_type,
             requests=requests,
+            responder_model_id=responder_model_id,
+            responder_prompt=responder_prompt,
+            responder_model_params=responder_model_params,
+            summarization_algorithm=summarization_algorithm,
+            summarization_prompt=summarization_prompt,
+            summarization_model_id=summarization_model_id,
+            summarization_model_params=summarization_model_params,
         )
 
         information_requests = InformationRequestsClient()
@@ -131,9 +139,11 @@ class InformationRequestAPI(ChildAPI):
             resource_names=resource_names,
             responder_model_id=responder_model_id,
             responder_prompt=responder_prompt,
+            responder_model_params=responder_model_params,
             summarization_algorithm=summarization_algorithm,
             summarization_prompt=summarization_prompt,
             summarization_model_id=summarization_model_id,
+            summarization_model_params=summarization_model_params,
         )
 
         event = EventBusEvent(

@@ -58,9 +58,11 @@ class InformationRequestBody(GenericEventBody):
     resource_names: List[str] = None
     responder_model_id: Optional[str] = None
     responder_prompt: Optional[str] = None
+    responder_model_params: Optional[Dict] = None
     summarization_algorithm: Optional[str] = None
     summarization_prompt: Optional[str] = None
     summarization_model_id: Optional[str] = None
+    summarization_model_params: Optional[Dict] = None
     event_type: str = 'start_information_request'
 
 

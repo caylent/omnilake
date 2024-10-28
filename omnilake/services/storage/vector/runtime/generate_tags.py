@@ -111,7 +111,7 @@ def handler(event: Dict, context: Dict):
 
     jobs = JobsClient()
 
-    job = jobs.get(job_type=event_body.job_type, job_id=event_body.job_id)
+    job = jobs.get(job_type=event_body.parent_job_type, job_id=event_body.parent_job_id)
 
     tag_extraction_job = job.create_child(job_type='ENTRY_TAG_EXTRACTION')
 

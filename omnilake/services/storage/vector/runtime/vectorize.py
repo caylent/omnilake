@@ -203,7 +203,8 @@ def handler(event: Dict, context: Dict):
                     content=entry_content.response_body['content'],
                     parent_job_id=job.job_id,
                     parent_job_type=job.job_type,
-                )
+                ).to_dict(),
+                event_type='generate_entry_tags',
             )
         )
 

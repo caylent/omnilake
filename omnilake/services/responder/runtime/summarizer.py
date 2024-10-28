@@ -22,7 +22,7 @@ from omnilake.internal_lib.naming import OmniLakeResourceName, EntryResourceName
 
 from omnilake.tables.summary_jobs.client import SummaryJobsTableClient
 from omnilake.tables.entries.client import Entry, EntriesClient
-from omnilake.tables.jobs.client import JobsClient, JobStatus
+from omnilake.tables.jobs.client import JobsClient
 from omnilake.tables.information_requests.client import InformationRequestsClient
 
 from omnilake.services.responder.runtime.response import FinalResponseEventBody
@@ -52,38 +52,6 @@ class SummarizationRequest(GenericEventBody):
 
 
 class SummaryPrompt:
-    NO_GOAL_PROMPT = """You are an AI assistant designed to summarize data by extracting key facts and insights from given content. Your primary goal is to distill information to its most essential elements. Follow these steps:
-
-- Scan the entire content to grasp its overall scope.
-- Identify and extract:
-    - Core facts and statistics
-    - Key insights or conclusions
-    - Essential data points
-    - Critical findings or results
-- Discard all supplementary information, explanations, and context unless absolutely crucial for understanding the key facts.
-- Ensure each extracted element can stand alone as a piece of information.
-- Maintain a high level of detail and accuracy in your summary. It should still be concise and to the point.
-- Bring forward all details that are important
-
-Your output should be a highly condensed version of the original content, retaining only the most crucial facts and insights. Aim for maximum information density while maintaining clarity and accuracy. 
-"""
-
-    WITH_GOAL_PROMPT = """You are an AI assistant designed to summarize data by extracting key facts and insights from given content, with a specific focus on the user's stated goal. Your primary objective is to distill information to its most essential and relevant elements. Follow these steps:
-
-- Carefully review the user's stated goal.
-- Scan the entire content to identify information relevant to the user's needs.
-- Extract and summarize only the following elements that directly relate to the user's request and goal:
-    - Core facts and statistics
-    - Key insights or conclusions
-    - Essential data points
-    - Critical findings or results
-- Discard all information that doesn't directly contribute to addressing the user's request or achieving their goal.
-- Ensure each extracted element is directly relevant to the user's request and goal.
-- Maintain a high level of detail and accuracy in your summary. It should still be concise and to the point.
-- Bring forward all details that are important
-
-Your output should be a highly condensed, goal-oriented version of the original content, retaining only the most crucial facts and insights that directly address the user's needs. Aim for maximum relevance and information density while maintaining clarity and accuracy.
-"""
     def __init__(self, resource_names: List[str], goal: str = None):
         self.goal = goal
 
@@ -134,11 +102,9 @@ Your output should be a highly condensed, goal-oriented version of the original 
         '''
         Generates the summarize prompt.
         '''
-        prompt = self.NO_GOAL_PROMPT
+        prompt = setting_value(namespace="responder", setting_key="default_summary_prompt")
 
         if self.goal:
-            prompt = self.WITH_GOAL_PROMPT
-
             prompt += f"\n\nUSER GOAL: {self.goal}\n\n"
 
         prompt += "\n\nCONTENT:\n\n"

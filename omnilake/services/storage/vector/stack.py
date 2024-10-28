@@ -79,7 +79,7 @@ class VectorStorageManagerStack(Stack):
         )
 
         self.vector_store_bucket_setting = GlobalSetting(
-            namespace='storage',
+            namespace='vector_storage',
             setting_key='vector_store_bucket',
             setting_value=self.vector_store_bucket.bucket_name,
             scope=self,
@@ -298,7 +298,7 @@ class VectorStorageManagerStack(Stack):
 
         self.chunk_overlap_setting = GlobalSetting(
             description="The percentage of overlap between chunks in a vector store.",
-            namespace='storage',
+            namespace='vector_storage',
             setting_key='chunk_overlap',
             setting_value=40,
             scope=self,
@@ -307,7 +307,7 @@ class VectorStorageManagerStack(Stack):
 
         self.max_chunk_length_setting = GlobalSetting(
             description="The maximum length of a chunk in a vector store.",
-            namespace='storage',
+            namespace='vector_storage',
             setting_key='max_chunk_length',
             setting_value=1000,
             scope=self,
