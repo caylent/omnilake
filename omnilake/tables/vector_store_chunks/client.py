@@ -119,7 +119,7 @@ class VectorStoreChunksClient(TableClient):
 
         resulting_chunks = []
 
-        for page in  self.paginated(call="query", parameters=params):
+        for page in self.paginated(call="query", parameters=params):
             resulting_chunks.extend(page)
 
         return resulting_chunks

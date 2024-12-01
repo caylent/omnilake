@@ -26,6 +26,7 @@ class Source(TableObject):
         name='source_id',
         attribute_type=TableObjectAttributeType.STRING,
         description='The generated unique identifier of the source.',
+        default=lambda: str(uuid4()),
     )
 
     attributes = [
@@ -34,6 +35,13 @@ class Source(TableObject):
             attribute_type=TableObjectAttributeType.DATETIME,
             description='The date and time the source was added to the Omnilake.',
             default=lambda: datetime.now(utc_tz),
+        ),
+
+        TableObjectAttribute(
+            name='attribute_key',
+            attribute_type=TableObjectAttributeType.STRING,
+            description='The unique key of the source, created by combining the source attributes',
+            default=lambda: str(uuid4()),
         ),
 
         TableObjectAttribute(
@@ -100,6 +108,34 @@ class SourcesClient(TableClient):
             partition_key_value=source_type,
             sort_key_value=source_id,
         )
+
+    def get_by_attribute_key(self, attribute_key: str) -> Union[Source, None]:
+        """
+        Get a source by attribute key
+
+        Keyword Arguments:
+            attribute_key -- The attribute key of the source.
+
+        Returns:
+            The source if found, otherwise None.
+        """
+        params = {
+            "KeyConditionExpression": "AttributeKey = :attr_key",
+            "ExpressionAttributeValues":{
+                ":attr_key": {"S": attribute_key},
+            },
+            "IndexName": "attribute-key-index"
+        }
+
+        results = []
+
+        for page in self.paginated(call="query", parameters=params):
+            results.extend(page)
+
+        if len(results) == 0:
+            return None
+
+        return results[0]
 
     def put(self, source: Source) -> None:
         """

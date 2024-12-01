@@ -575,6 +575,8 @@ class VectorArchiveManagerStack(Stack):
             timeout=Duration.minutes(10),
         )
 
+        self.vector_store_bucket.grant_read_write(self.vacuum.handler.function)
+
         self.vector_store_bucket.grant_read_write(self.vector_store_rebalancer.handler.function)
 
         self.vs_query = EventBusSubscriptionFunction(

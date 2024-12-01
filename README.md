@@ -1,78 +1,42 @@
-# OmniLake
+OmniLake
+========
+OmniLake is a Python/AWS Framework that enables the development of enterprise-grade AI applications with built-in data lineage and traceability. It provides a comprehensive solution for managing unstructured information while addressing common AI adoption challenges.
 
-OmniLake is a centralized data repository system built to support AI initiatives. It provides a scalable and efficient way to ingest, store, process, and retrieve information, enabling powerful AI-driven querying and analysis.
+### Key Features
 
-## Features
+- Built-in data lineage tracking for AI outputs
+- Scalable from proof-of-concept to enterprise deployment
+- Standardized data management with full control
+- Rapid deployment capabilities with minimal initial setup
+- Cost-effective scaling with pay-as-you-go model
+- Advanced semantic search and retrieval
+- Customizable for specific business needs
 
-- Modular, event-driven architecture for scalability and flexibility
-- Efficient vector storage and retrieval using LanceDB and S3
-- AI-powered data compaction and summarization
-- Flexible archive and entry management for organized data storage
-- Robust job handling for asynchronous operations
-- Semantic search capabilities using vector embeddings
-- Integration with Amazon Bedrock for advanced AI functionalities
-- Automated vector store management and optimization
+### Core Benefits
 
-## Overview
+- Reduces AI implementation complexity
+- Ensures traceability of AI-generated content
+- Enables quick proof-of-concept development
+- Provides enterprise-grade data management
+- Maintains control over data
 
-1. Architecture
-    1. Modular design with separate services for API handling, data ingestion, storage management, and response generation
-    1. Event-driven architecture using AWS EventBridge for asynchronous processing
-    1. Serverless implementation leveraging AWS Lambda for scalability and cost-efficiency
+### Requirements
+- Python 3.12
+- CDK
+- AWS Account (Max managed policies limit must be bumped to 20)
 
-1. Data Ingestion
-    1. Processes incoming data, extracting metadata and insights
-    1. Chunks large text documents for efficient storage and retrieval
-    Generates vector embeddings for semantic search capabilities
-    1. Supports various source types (e.g., files, websites, transcripts)
+### ⚠️ Experimental Feature Warning ️⚠️
 
-1. Storage
-    1. Uses DynamoDB for metadata storage (archives, entries, jobs, etc.)
-    1. Implements vector storage using LanceDB and S3 for efficient similarity search
-    1. Manages multiple vector stores per archive for optimized performance
-    1. Includes automatic rebalancing of vector stores based on content and usage patterns
+The automatic archive segmentation feature (which attempts to split and categorize information into purpose-built vector stores) is very experimental. While promising for knowledge organization, it's not yet production-ready and should be used with caution in non-critical environments.
 
-1. Information Retrieval
-    1. Provides semantic search capabilities using vector embeddings
-    1. Implements a multi-stage compaction process for summarizing large amounts of information
-    1. Generates AI-powered responses to user queries using language models (via Amazon Bedrock)
-
-1. Job Management
-    1. Tracks and manages asynchronous operations throughout the system
-    1. Supports long-running tasks like data ingestion, vector store rebalancing, and response generation
-
-1. API and Client Library
-    1. Offers a REST API for external interactions
-    1. Provides a Python client library for easy integration with other applications
-
-1. Key Concepts
-    1. Archives: Logical groupings of related data
-    1. Entries: Individual pieces of content within archives
-    1. Sources: Track the origin and provenance of data
-    1. Vector Stores: Efficient storage and retrieval of vector embeddings
-
-1. AI Integration
-    1. Uses Amazon Bedrock for generating vector embeddings
-    1. Leverages large language models for content summarization and response generation
-    1. Implements AI-driven insights extraction from ingested content
-
-1. Scalability and Maintenance:
-    1. Includes automated processes for vector store management and optimization
-    1. Implements maintenance modes for archives during large-scale operations
-    1. Provides mechanisms for recalculating and updating metadata and tags
-
-1. Development and Deployment:
-    1. Uses AWS CDK for infrastructure-as-code and deployment
-    1. Implements a development environment setup script (dev.sh) for easy onboarding
-    1. Uses Poetry for Python dependency management
-
-## Components
+Components
+----------
 
 ### API Service
 Handles external interactions and manages the public-facing API.
 
 ### Ingestion Service
-Processes new data entries, extracting metadata and preparing content for storage.
+Processes new data entries and prepares content for storage.
 
 ### Storage Service
 Manages vector stores and data persistence, including rebalancing and optimization.
@@ -80,21 +44,26 @@ Manages vector stores and data persistence, including rebalancing and optimizati
 ### Responder Service
 Handles information requests, generating AI-powered responses based on stored data.
 
-## Key Concepts
+Key Concepts
+------------
+
+### Definitions
 
 - **Archives**: Logical groupings of related data
 - **Entries**: Individual pieces of content within archives
 - **Sources**: Tracking of data provenance
 - **Jobs**: Management of asynchronous processing tasks
 
-## Technology Stack
+### Technology
 
 - AWS Services: DynamoDB, S3, EventBridge, Lambda
 - Vector Storage: LanceDB
 - AI/ML: Amazon Bedrock for embeddings and language model inference
 - Infrastructure: AWS CDK for deployment
 
-## Getting Started
+Getting Started
+---------------
+To utilize Omnilake effectively, you should include it as a dependency for your own application. However, the framework will deploy and create all the necessary services to start using a base Omnilake deployment.
 
 ### Prerequisites
 

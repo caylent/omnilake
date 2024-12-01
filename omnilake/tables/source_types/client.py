@@ -44,12 +44,12 @@ class SourceType(TableObject):
         ),
     ]
 
-    def generate_id(self, source_arguments: Dict, key_separator: str = '/') -> str:
+    def generate_key(self, source_arguments: Dict, key_separator: str = '/') -> str:
         """
-        Generate a unique id for a source type.
+        Generate a unique attribute key for a source.
 
         Keyword Arguments:
-        source_arguments -- The source arguments to use to generate the id.
+        source_arguments -- The source arguments to use to generate the key.
         """
         key_parts = []
 

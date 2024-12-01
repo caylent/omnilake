@@ -103,6 +103,8 @@ class SummaryPrompt:
             entry_obj = self._entries_client.get(entry_id=parsed_resource_name.resource_id)
 
             if entry_obj.original_of_source:
+                logging.debug(f"Source metadata requested for entry {parsed_resource_name.resource_id}.")
+
                 source_rn = OmniLakeResourceName.from_string(entry_obj.original_of_source)
 
                 source_obj = self._sources_client.get(
@@ -149,8 +151,6 @@ class SummaryPrompt:
 
         if self.goal:
             prompt += f"\n\nUSER GOAL: {self.goal}\n\n"
-
-        prompt += "\n\nCONTENT:\n\n"
 
         resource_contents = "\n\n".join([self.resource_content(resource_name) for resource_name in self.resource_names])
 

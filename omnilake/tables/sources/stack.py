@@ -22,3 +22,11 @@ class SourcesTable(Stack):
             scope=self,
             table_object=Source,
         )
+
+        self.table.table.add_global_secondary_index(
+            index_name="attribute-key-index",
+            partition_key=cdk_dynamodb.Attribute(
+                name='AttributeKey',
+                type=cdk_dynamodb.AttributeType.STRING
+            ),
+        )

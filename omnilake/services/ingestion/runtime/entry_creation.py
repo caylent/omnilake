@@ -180,8 +180,14 @@ def _set_source_latest_content_entry_id(entry_effective_date: datetime, entry_id
 
         latest_entry = entries.get(entry_id=source.latest_content_entry_id)
 
+        # Set timezone to UTC before conversion
+        if entry_effective_date.tzinfo is None:
+            entry_effective_date = entry_effective_date.replace(tzinfo=utc_tz)
+
+        latest_entry_effective_date = latest_entry.effective_on.replace(tzinfo=utc_tz)
+
         if latest_entry:
-            if latest_entry.effective_on < entry_effective_date:
+            if latest_entry_effective_date < entry_effective_date:
                 logging.debug(f"Setting latest entry ID for source {source_rn} to {entry_id}")
 
                 source.latest_content_entry_id = entry_id
@@ -286,7 +292,6 @@ def handler(event: Dict, context: Dict):
                         content=summary_results.response,
                         effective_on=event_body.effective_on,
                         job_id=event_body.job_id,
-                        immutable=True,
                         sources=[
                             str(EntryResourceName(entry.entry_id))
                         ]

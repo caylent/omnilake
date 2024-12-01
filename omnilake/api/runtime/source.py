@@ -62,7 +62,7 @@ class SourcesAPI(ChildAPI):
         sources = SourcesClient()
 
         try:
-            source_id = source_type_obj.generate_id(source_arguments=source_arguments)
+            attribute_key = source_type_obj.generate_key(source_arguments=source_arguments)
 
         except ValueError as e:
             return self.respond(
@@ -70,7 +70,7 @@ class SourcesAPI(ChildAPI):
                 status_code=400,
             )
 
-        existing_source = sources.get(source_type=source_type, source_id=source_id)
+        existing_source = sources.get_by_attribute_key(attribute_key=attribute_key)
 
         if existing_source:
             existing_resource_name = SourceResourceName(
@@ -87,7 +87,7 @@ class SourcesAPI(ChildAPI):
 
         source = Source(
             source_type=source_type,
-            source_id=source_id,
+            attribute_key=attribute_key,
             source_arguments=source_arguments
         )
 

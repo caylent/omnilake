@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "omnilake"
-version = "2024.11.14"
+version = "2024.12.01"
 description = "Data Lake Capabilities combined with AI to create an AWS based Intelligence Lake"
 authors = ["Jim Rosser <jim.rosser@caylent.com>"]
 license = "MIT"

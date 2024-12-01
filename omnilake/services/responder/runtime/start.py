@@ -351,7 +351,7 @@ def start_responder(event: Dict, context: Dict):
 
     # Yeah, I did do this on purpose :laughing:
     for og_source in info_req.original_sources:
-        logging.info(f'Compacting resource: {og_source}')
+        logging.info(f'Summarizing resource: {og_source}')
 
         event_publisher.submit(
             event=source_event.next_event(

@@ -98,6 +98,13 @@ def handler(event: Dict, context: Dict):
 
         archive_entries_client = ArchiveEntriesClient()
 
-        archive_entries_client.delete(event_body.entry_id, event_body.archive_id)
+        archive_entry = archive_entries_client.get(entry_id=event_body.entry_id, archive_id=event_body.archive_id)
 
-        logging.debug(f"Deleted entry index for entry {event_body.entry_id} in archive {event_body.archive_id}")
+        if archive_entry:
+
+            archive_entries_client.delete(archive_entry)
+
+            logging.debug(f"Deleted entry index for entry {event_body.entry_id} in archive {event_body.archive_id}")
+
+        else:
+            logging.debug(f"Could not find entry index for entry {event_body.entry_id} in archive {event_body.archive_id} ... nothing to delete")
