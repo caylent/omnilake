@@ -3,25 +3,29 @@ from typing import Dict, List, Optional, Union
 
 
 @dataclass
-class BasicArchiveInformationRequest:
+class BasicInformationRetrievalRequest:
     archive_id: str
-    evaluation_type: str # INCLUSIVE or EXCLUSIVE
     max_entries: int
     prioritize_tags: Optional[List[str]] = None
     request_type: str = 'BASIC'
 
 
 @dataclass
-class VectorArchiveInformationRequest:
+class RelatedInformationRetrievalRequest:
+    related_request_id: str
+    request_type: str = 'RELATED'
+
+
+@dataclass
+class VectorInformationRetrievalRequest:
     archive_id: str
     query_string: str
-    evaluation_type: str
     max_entries: int
     prioritize_tags: Optional[List[str]] = None
     request_type: str = 'VECTOR'
 
 
-def load_raw_request(request: dict) -> Union[BasicArchiveInformationRequest, VectorArchiveInformationRequest]:
+def load_raw_request(request: dict) -> Union[BasicInformationRetrievalRequest, RelatedInformationRetrievalRequest, VectorInformationRetrievalRequest]:
     """
     Load an information request from a dictionary
 
@@ -29,15 +33,18 @@ def load_raw_request(request: dict) -> Union[BasicArchiveInformationRequest, Vec
     request -- The request
     """
     if request['request_type'] == 'BASIC':
-        return BasicArchiveInformationRequest(**request)
+        return BasicInformationRetrievalRequest(**request)
+
+    elif request['request_type'] == 'RELATED':
+        return RelatedInformationRetrievalRequest(**request)
 
     elif request['request_type'] == 'VECTOR':
-        return VectorArchiveInformationRequest(**request)
+        return VectorInformationRetrievalRequest(**request)
 
     raise ValueError('Invalid request type')
 
 
-def load_raw_requests(requests: List[Dict]) -> List[Union[BasicArchiveInformationRequest, VectorArchiveInformationRequest]]:
+def load_raw_requests(requests: List[Dict]) -> List[Union[BasicInformationRetrievalRequest, RelatedInformationRetrievalRequest, VectorInformationRetrievalRequest]]:
     """
     Load information requests from a list of dictionaries
 

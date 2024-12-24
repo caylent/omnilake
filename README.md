@@ -94,7 +94,14 @@ Here's a basic example of how to use the OmniLake client library to interact wit
 
 ```python
 from omnilake.client.client import OmniLake
-from omnilake.client.request_definitions import AddEntry, CreateArchive
+from omnilake.client.request_definitions import (
+    AddEntry,
+    AddSource,
+    BasicInformationRetrievalRequest,
+    CreateSourceType,
+    CreateArchive,
+    InformationRequest,
+)
 
 # Initialize the OmniLake client
 omnilake = OmniLake()
@@ -106,11 +113,30 @@ archive_req = CreateArchive(
 )
 omnilake.create_archive(archive_req)
 
+source_type = CreateSourceType(
+    name='webpage',
+    description='Content that belongs to a web page',
+    required_fields=['url', 'published_date'],
+)
+omnilake.create_source_type(source_type)
+
+source = AddSource(
+    source_type='webpage',
+    source_arguments={
+        'url': 'https://example.com/about',
+        'published_date': '2024-24-12',
+    }
+)
+source_result = omnilake.add_source(source)
+
+source_rn = source_result.response_body['resource_name']
+
 # Add an entry to the archive
 entry_req = AddEntry(
     archive_id='my_archive',
     content='This is a sample entry in my OmniLake archive.',
-    sources=['https://example.com/source']
+    sources=[source_rn],
+    original_source=source_rn # Indicates whether the content is original content of the source location
 )
 result = omnilake.add_entry(entry_req)
 
@@ -118,10 +144,13 @@ print(f"Entry added with ID: {result.response_body['entry_id']}")
 
 # Request information
 info_req = InformationRequest(
-    archive_id='my_archive',
     goal='Summarize the contents of the archive',
-    request='What information is stored in this archive?',
-    request_type='INCLUSIVE'
+    retrieval_requests=[
+        BasicInformationRetrievalRequest(
+            archive_id='my_archive',
+            max_entries=10,
+        )
+    ]
 )
 response = omnilake.request_information(info_req)
 

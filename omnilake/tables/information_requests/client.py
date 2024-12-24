@@ -94,9 +94,9 @@ class InformationRequest(TableObject):
         ),
 
         TableObjectAttribute(
-            name='requests',
+            name='retrieval_requests',
             attribute_type=TableObjectAttributeType.JSON_STRING_LIST,
-            description='The information requests used to respond to the goal.',
+            description='The information retrieval requests used to fetch information for assisting the user with their goal.',
         ),
 
         TableObjectAttribute(

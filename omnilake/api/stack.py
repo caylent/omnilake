@@ -23,7 +23,6 @@ from omnilake.tables.jobs.stack import Job, JobsTable
 from omnilake.tables.sources.stack import Source, SourcesTable
 from omnilake.tables.source_types.stack import SourceType, SourceTypesTable
 
-
 from omnilake.services.ingestion.stack import IngestionServiceStack
 from omnilake.services.responder.stack import ResponderEngineStack
 from omnilake.services.storage.basic.stack import BasicArchiveManagerStack

@@ -91,7 +91,7 @@ class IndexVectorEntryBody(GenericEventBody):
 @dataclass
 class InformationRequestBody(GenericEventBody):
     request_id: str
-    requests: List[Dict] = None # This is also allowed because of the below reason lol
+    retrieval_requests: List[Dict] = None # This is also allowed because of the below reason lol
     goal: str = None # This is allowed b/c of the hack ass way I re-use this event body
     job_id: str = None
     job_type: str = JobType.INFORMATION_REQUEST

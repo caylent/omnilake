@@ -28,7 +28,7 @@ def _validate_request(request: Dict):
     request -- The request
     """
     # Catch all the globally required keys
-    required_keys = ['archive_id']
+    required_keys = ['request_type']
 
     for key in required_keys:
         if key not in request:
@@ -62,7 +62,7 @@ class InformationRequestAPI(ChildAPI):
         )
     ]
 
-    def request_information(self, goal: str, requests: List[Dict], destination_archive_id: Optional[str] = None,
+    def request_information(self, goal: str, retrieval_requests: List[Dict], destination_archive_id: Optional[str] = None,
                             include_source_metadata: Optional[bool] = False, resource_names: Optional[List[str]] = None,
                             responder_use_source_metadata: Optional[bool] = False, responder_model_id: Optional[str] = None,
                             responder_prompt: Optional[str] = None, responder_model_params: Optional[Dict] = None,
@@ -73,7 +73,7 @@ class InformationRequestAPI(ChildAPI):
 
         Keyword arguments:
         goal -- The goal
-        requests -- The requests
+        retrieval_requests -- The requests for retrieving the information
         destination_archive_id -- The destination archive ID
         include_source_metadata -- Whether to include source metadata
         resource_names -- The resource names
@@ -86,10 +86,10 @@ class InformationRequestAPI(ChildAPI):
         summarization_model_id -- The summarization model ID
         summarization_model_params -- The summarization model parameters
         """
-        logging.info(f'Requesting information: {goal} {requests}')
+        logging.info(f'Requesting information: {goal} {retrieval_requests}')
 
         try:
-            _validate_requests(requests)
+            _validate_requests(retrieval_requests)
         except ValueError as e:
             return self.respond(
                 body={'message': str(e)},
@@ -108,7 +108,7 @@ class InformationRequestAPI(ChildAPI):
             job_id=job.job_id,
             job_type=job.job_type,
             include_source_metadata=include_source_metadata,
-            requests=requests,
+            retrieval_requests=retrieval_requests,
             responder_use_source_metadata=responder_use_source_metadata,
             responder_model_id=responder_model_id,
             responder_prompt=responder_prompt,
@@ -126,7 +126,7 @@ class InformationRequestAPI(ChildAPI):
         event_body = InformationRequestBody(
             goal=goal,
             job_id=job.job_id,
-            requests=requests,
+            retrieval_requests=retrieval_requests,
             request_id=info_request.request_id,
             resource_names=resource_names,
             responder_model_id=responder_model_id,

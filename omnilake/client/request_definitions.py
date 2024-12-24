@@ -101,20 +101,24 @@ class IndexEntry(RequestSuperclass):
 
 
 @dataclass
-class BasicArchiveInformationRequest:
+class BasicInformationRetrievalRequest:
     archive_id: str
     max_entries: int
-    evaluation_type: str = 'INCLUSIVE' # Only one supported type
     prioritize_tags: Optional[List[str]] = None # These are calculated by the system if not provided
     request_type: str = 'BASIC'
 
 
 @dataclass
-class VectorArchiveInformationRequest:
+class RelatedInformationRetrievalRequest:
+    related_request_id: str
+    request_type: str = 'RELATED'
+
+
+@dataclass
+class VectorInformationRetrievalRequest:
     archive_id: str
     max_entries: int # Must always be set by the requester
-    evaluation_type: str = 'EXCLUSIVE' # Only one supported type
-    query_string: str = None # required if the evaluation type is EXCLUSIVE
+    query_string: str = None
     prioritize_tags: Optional[List[str]] = None # These are calculated by the system if not provided
     request_type: str = 'VECTOR'
 
@@ -122,7 +126,7 @@ class VectorArchiveInformationRequest:
 @dataclass
 class InformationRequest(RequestSuperclass):
     goal: str
-    requests: List[Union[Dict, BasicArchiveInformationRequest, VectorArchiveInformationRequest]]
+    retrieval_requests: List[Union[Dict, BasicInformationRetrievalRequest, RelatedInformationRetrievalRequest, VectorInformationRetrievalRequest]]
     include_source_metadata: Optional[bool] = False
     resource_names: Optional[List[str]] = None
     responder_model_id: Optional[str] = None # system default used if not provided
@@ -134,7 +138,7 @@ class InformationRequest(RequestSuperclass):
     def __post_init__(self):
         normalized_requests = []
 
-        for req in self.requests:
+        for req in self.retrieval_requests:
             if isinstance(req, dict):
                 normalized_requests.append(req)
 

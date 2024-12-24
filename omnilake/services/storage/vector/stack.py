@@ -22,6 +22,8 @@ from da_vinci_cdk.constructs.global_setting import GlobalSetting, SettingType
 from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
 from da_vinci_cdk.constructs.lambda_function import LambdaFunction
 
+from da_vinci_cdk.framework_stacks.event_bus.stack import EventBusStack
+
 
 from omnilake.tables.archives.stack import Archive, ArchiveTable
 from omnilake.tables.archive_entries.stack import ArchiveEntry, ArchiveEntriesTable
@@ -59,6 +61,7 @@ class VectorArchiveManagerStack(Stack):
                 ArchiveTable,
                 ArchiveEntriesTable,
                 EntriesTable,
+                EventBusStack,
                 JobsTable,
                 RawStorageManagerStack,
                 SourcesTable,

@@ -14,6 +14,8 @@ from da_vinci_cdk.constructs.access_management import ResourceAccessRequest
 from da_vinci_cdk.constructs.base import resource_namer
 from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
 
+from da_vinci_cdk.framework_stacks.event_bus.stack import EventBusStack
+
 from omnilake.tables.archives.stack import Archive, ArchiveTable
 from omnilake.tables.jobs.stack import Job, JobsTable
 from omnilake.tables.archive_entries.stack import ArchiveEntry, ArchiveEntriesTable
@@ -44,6 +46,7 @@ class BasicArchiveManagerStack(Stack):
             required_stacks=[
                 ArchiveTable,
                 ArchiveEntriesTable,
+                EventBusStack,
                 JobsTable,
                 RawStorageManagerStack,
                 SourcesTable,

@@ -40,7 +40,7 @@ from omnilake.tables.summary_jobs.client import (
 from omnilake.services.responder.runtime.summarizer import SummarizationRequest
 from omnilake.services.responder.runtime.request_types import (
     load_raw_requests,
-    VectorArchiveInformationRequest,
+    VectorInformationRetrievalRequest,
 )
 
 
@@ -133,7 +133,7 @@ def _load_inclusive_resource_names(archive_id: str, max_entries: Optional[int] =
     return [str(EntryResourceName(resource_id=entr.entry_id)) for entr in collected_entries]
 
 
-def _query_request(parent_job: Job, request_id: str, request: VectorArchiveInformationRequest):
+def _query_request(parent_job: Job, request_id: str, request: VectorInformationRetrievalRequest):
     '''
     Handles query requests
 
@@ -182,7 +182,7 @@ def _validate_resource_names(resource_names: List[str]):
             raise ValueError(f'Entry with resource name {resource_name} does not exist')
 
 
-def _validate_requests(requests: List[VectorArchiveInformationRequest]):
+def _validate_requests(requests: List[VectorInformationRetrievalRequest]):
     '''
     Validates the request
 
@@ -194,6 +194,10 @@ def _validate_requests(requests: List[VectorArchiveInformationRequest]):
     fetched_archives = []
 
     for request in requests:
+        if request.request_type == 'RELATED':
+            # Skip related requests, we assume they are valid
+            continue
+
         archive_id = request.archive_id
 
         if archive_id in fetched_archives:
@@ -238,23 +242,46 @@ def _handle_initial_phase(event_body: InformationRequestBody) -> bool:
 
     active_queries = 0
 
-    loaded_requests = load_raw_requests(event_body.requests)
+    loaded_requests = load_raw_requests(event_body.retrieval_requests)
 
     with jobs.job_execution(parent_job, skip_completion=True):
         _validate_requests(loaded_requests)
 
     # Initial load of the requests to catch any errors early
     with jobs.job_execution(parent_job, failure_status_message='Failed to load requested data', skip_completion=True):
-        loaded_requests = load_raw_requests(event_body.requests)
+        loaded_requests = load_raw_requests(event_body.retrieval_requests)
+
+        loaded_archive_information = {} # Hash of arhives already looked up to prevent duplicate lookups
+
+        archives_client = ArchivesClient()
+
+        # Set the original sources to an empty set if it is not already set
+        if not info_request.original_sources:
+            info_request.original_sources = set()
 
         for request in loaded_requests:
-            if request.evaluation_type == 'EXCLUSIVE':
-                if request.request_type == 'BASIC':
-                    raise ValueError('Requests to BASIC archives cannot be EXCLUSIVE, only INCLUSIVE')
+            if request.request_type == 'VECTOR':
+                if request.archive_id in loaded_archive_information:
+                    loaded_archive = loaded_archive_information[request.archive_id]
+
+                else:
+                    loaded_archive = archives_client.get(archive_id=request.archive_id)
+
+                    loaded_archive_information[request.archive_id] = loaded_archive
+
+                # Validate that the archive is a VECTOR archive
+                if loaded_archive.storage_type != 'VECTOR':
+                    raise ValueError('Cannot perform exclusive requests on non-VECTOR archives')
 
                 _query_request(parent_job=parent_job, request_id=info_request.request_id, request=request)
 
                 active_queries += 1
+
+            elif request.request_type == 'RELATED':
+                # Fetch the information for the related requests
+                related_request = information_requests.get(request_id=request.related_request_id)
+
+                info_request.original_sources.update(related_request.original_sources)
 
             else:
                 resources = _load_inclusive_resource_names(
@@ -262,9 +289,6 @@ def _handle_initial_phase(event_body: InformationRequestBody) -> bool:
                     max_entries=request.max_entries,
                     prioritized_tags=request.prioritize_tags,
                 )
-
-                if not info_request.original_sources:
-                    info_request.original_sources = set()
 
                 info_request.original_sources.update(resources)
 
@@ -349,7 +373,7 @@ def start_responder(event: Dict, context: Dict):
 
     event_publisher = EventPublisher()
 
-    # Yeah, I did do this on purpose :laughing:
+    # Submit the initial summarization requests for each source
     for og_source in info_req.original_sources:
         logging.info(f'Summarizing resource: {og_source}')
 
