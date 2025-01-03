@@ -32,7 +32,6 @@ class CreateBasicArchiveBody(GenericEventBody):
     job_id: str
     retain_latest_originals_only: bool = True
     storage_type: str = 'BASIC'
-    tag_hint_instructions: str = None
     visibility: str = 'PUBLIC'
     job_type: str = JobType.CREATE_ARCHIVE
     event_type: str = 'create_basic_archive'

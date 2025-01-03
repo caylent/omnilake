@@ -1,6 +1,185 @@
+from datetime import datetime
+from enum import StrEnum
+from typing import Any, Dict, List, Optional, Union, Type
+
 from da_vinci.core.client_base import RESTClientBase, RESTClientResponse
 
-import omnilake.client.request_definitions as reqs
+from omnilake.client.request_definitions import RequestBody
+
+
+class RequestAttributeError(Exception):
+    def __init__(self, attribute_name: str, error: str = "Missing required attribute"):
+        """
+        A custom exception for missing required request attributes.
+
+        Keyword arguments:
+        attribute_name -- The name of the attribute that is missing
+        """
+        self.attribute_name = attribute_name
+
+        super().__init__(f"{error}: {attribute_name}")
+
+
+class RequestAttributeType(StrEnum):
+    BOOLEAN = 'BOOLEAN'
+    DATETIME = 'DATETIME'
+    FLOAT = 'FLOAT'
+    LIST = 'LIST'
+    INTEGER = 'INTEGER'
+    OBJECT = 'OBJECT'
+    OBJECT_LIST = 'OBJECT_LIST'
+    STRING = 'STRING'
+
+
+class RequestBodyAttribute:
+    def __init__(self, name: str, attribute_type: Union[RequestAttributeType, Type] = RequestAttributeType.STRING,
+                 attribute_subtype: Optional[Union[RequestAttributeType, Type]] = None, default: Optional[str] = None,
+                 immutable_default: Optional[str] = None, optional: Optional[bool] = False,
+                 supported_request_body_types: Optional[Union[Type["RequestBody"], List[Type["RequestBody"]]]] = None):
+        """
+        Initialize the request body attribute.
+
+        Keyword arguments:
+        name -- The name of the attribute
+        attribute_type -- The type of the attribute
+        attribute_subtype -- The subtype of the attribute
+        default -- The default value of the attribute
+        immutable_default -- The immutable default value of the attribute
+        optional -- Whether the attribute is optional
+        supported_request_body_types -- The supported request body types for the attribute
+        """
+        self.name = name
+
+        self.attribute_type = attribute_type
+
+        self.attribute_subtype = attribute_subtype
+
+        self.default = default
+
+        self.immutable_default = immutable_default
+
+        self.optional = optional
+
+        if isinstance(supported_request_body_types, str):
+            supported_request_body_types = [supported_request_body_types]
+
+        self.supported_request_body_types = supported_request_body_types
+
+    def validate_type(self, value: Any):
+        """
+        Validate the type of a value. Override this method to add custom validation logic.
+
+        Keyword arguments:
+        value -- The value to validate
+        """
+        if self.attribute_type == RequestAttributeType.BOOLEAN:
+            return isinstance(value, bool)
+
+        # Supports both datetime objects and strings in the format 'YYYY-MM-DD HH:MM:SS'
+        elif self.attribute_type == RequestAttributeType.DATETIME:
+            if isinstance(value, datetime):
+                return True
+            
+            try:
+                datetime.fromisoformat(value)
+
+                return True
+            
+            except ValueError:
+                return False
+
+        elif self.attribute_type == RequestAttributeType.FLOAT:
+            return isinstance(value, float)
+
+        elif self.attribute_type == RequestAttributeType.LIST:
+            return isinstance(value, list)
+        
+        elif self.attribute_type == RequestAttributeType.INTEGER:
+            return isinstance(value, int)
+
+        elif self.attribute_type == RequestAttributeType.OBJECT:
+            if isinstance(value, RequestBody):
+                if self.request_body_type is not None:
+                    return isinstance(value, tuple(self.supported_request_body_types))
+
+                return True
+
+        elif self.attribute_type == RequestAttributeType.OBJECT_LIST:
+            if not isinstance(value, list):
+                return False
+            
+            for item in value:
+                if isinstance(item, dict):
+                    return True
+                
+                if isinstance(item, RequestBody):
+                    if self.request_body_type is not None:
+                        return isinstance(item, self.supported_request_body_types)
+
+                    return True
+
+        elif self.attribute_type == RequestAttributeType.STRING:
+            return isinstance(value, str)
+
+        return False
+
+
+class RequestBody:
+    """
+    Represents a request body for a request to the omnilake API.
+
+    Keyword arguments:
+    attributes -- The attributes of the request
+    path -- The path of the request
+    """
+    attribute_definitions: List[RequestBodyAttribute]
+    path: str = None
+
+    def __init__(self, attributes: Dict):
+        """
+        Initialize the superclass.
+
+        Keyword arguments:
+        attributes -- The attributes of the request
+        """
+        self.attributes = {}
+
+        for attr in self.attribute_definitions:
+            attr_val = attributes.get(attr.name, attr.default)
+
+            if attr.immutable_default:
+                # If the attribute is immutable, it cannot be set
+                if attr_val:
+                    raise RequestAttributeError(attribute_name=attr.name, error="Immutable attribute cannot be set")
+
+                attr_val = attr.immutable_default
+
+            if attr_val is None and attr.optional:
+                    attr_val = attr.default
+
+            else:
+                raise RequestAttributeError(attribute_name=attr.name)
+
+            if attr_val is not None and not attr.validate_type(attr_val):
+                raise RequestAttributeError(attribute_name=attr.name, error="Invalid type for attribute")
+
+            if attr.attribute_type == RequestAttributeType.DATETIME and not isinstance(attr_val, str):
+                # Convert datetime objects to strings to ensure they are serialized correctly
+                attr_val = attr_val.isoformat()
+
+            self.attributes[attr.name] = attr_val
+
+    def to_dict(self):
+        """
+        Return the object as a dictionary. Supports nested RequestBody objects.
+        """
+        prepped_attributes = {}
+
+        for key, value in self.attributes.items():
+            if isinstance(value, RequestBody):
+                prepped_attributes[key] = value.to_dict()
+
+        return self.attributes
 
 
 class OmniLake(RESTClientBase):
@@ -11,218 +190,17 @@ class OmniLake(RESTClientBase):
             deployment_id=deployment_id
         )
 
-    def add_entry(self, entry_request: reqs.AddEntry) -> RESTClientResponse:
+    def request(self, request: RequestBody) -> RESTClientResponse:
         """
-        Add an entry to omnilake.
+        Make a request to omnilake.
 
         Keyword arguments:
-        entry_request -- The request to add an entry to omnilake.
+        request -- The request to make to omnilake.
         """
+        if not request.path:
+            raise ValueError('Request object does not have a defined path')
+
         return self.post(
-            body=entry_request.to_dict(),
-            path='/add_entry'
-        )
-
-    def add_source(self, source_request: reqs.AddSource) -> RESTClientResponse:
-        """
-        Add a source to omnilake.
-
-        Keyword arguments:
-        source_request -- The request to add a source to omnilake.
-        """
-        return self.post(
-            body=source_request.to_dict(),
-            path='/add_source'
-        )
-
-    def create_archive(self, create_archive_request: reqs.CreateArchive) -> RESTClientResponse:
-        """
-        Create an archive in omnilake.
-
-        Keyword arguments:
-        create_archive_request -- The request to create an archive in omnilake.
-        """
-        return self.post(
-            body=create_archive_request.to_dict(),
-            path='/create_archive'
-        )
-
-    def create_source_type(self, create_source_type_request: reqs.CreateSourceType) -> RESTClientResponse:
-        """
-        Create a source type in omnilake.
-
-        Keyword arguments:
-        create_source_type_request -- The request to create a source type in omnilake.
-        """
-        return self.post(
-            body=create_source_type_request.to_dict(),
-            path='/create_source_type'
-        )
-
-    def delete_entry(self, delete_entry_request: reqs.DeleteEntry) -> RESTClientResponse:
-        """
-        Delete an entry from omnilake.
-
-        Keyword arguments:
-        delete_entry_request -- The request to delete an entry from omnilake.
-        """
-        return self.post(
-            body=delete_entry_request.to_dict(),
-            path='/delete_entry'
-        )
-
-    def delete_source(self, delete_source_request: reqs.DeleteSource) -> RESTClientResponse:
-        """
-        Delete a source from omnilake.
-
-        Keyword arguments:
-        delete_source_request -- The request to delete a source from omnilake.
-        """
-        return self.post(
-            body=delete_source_request.to_dict(),
-            path='/delete_source'
-        )
-
-    def describe_archive(self, describe_archive_request: reqs.DescribeArchive) -> RESTClientResponse:
-        """
-        Describe an archive in omnilake.
-
-        Keyword arguments:
-        describe_archive_request -- The request to describe an archive in omnilake.
-        """
-        return self.post(
-            body=describe_archive_request.to_dict(),
-            path='/describe_archive'
-        )
-
-    def describe_entry(self, describe_entry_request: reqs.DescribeEntry) -> RESTClientResponse:
-        """
-        Describe an entry in omnilake.
-
-        Keyword arguments:
-        describe_entry_request -- The request to describe an entry in omnilake.
-        """
-        return self.post(
-            body=describe_entry_request.to_dict(),
-            path='/describe_entry'
-        )
-
-    def describe_job(self, describe_job_request: reqs.DescribeJob) -> RESTClientResponse:
-        """
-        Describe a job in omnilake.
-
-        Keyword arguments:
-        describe_job_request -- The request to describe a job in omnilake.
-        """
-        return self.post(
-            body=describe_job_request.to_dict(),
-            path='/describe_job'
-        )
-
-    def describe_information_request(self, describe_request: reqs.DescribeRequest) -> RESTClientResponse:
-        """
-        Describe an information request in omnilake.
-
-        Keyword arguments:
-        get_response_request -- The request to get a response from omnilake.
-        """
-        return self.post(
-            body=describe_request.to_dict(),
-            path='/describe_request'
-        )
-
-    def describe_source(self, describe_source_request: reqs.DescribeSource) -> RESTClientResponse:
-        """
-        Describe a source in omnilake.
-
-        Keyword arguments:
-        describe_source_request -- The request to describe a source in omnilake.
-        """
-        return self.post(
-            body=describe_source_request.to_dict(),
-            path='/describe_source'
-        )
-
-    def describe_source_type(self, describe_source_type_request: reqs.DescribeSourceType) -> RESTClientResponse:
-        """
-        Describe a source type in omnilake.
-
-        Keyword arguments:
-        describe_source_type_request -- The request to describe a source type in omnilake.
-        """
-        return self.post(
-            body=describe_source_type_request.to_dict(),
-            path='/describe_source_type'
-        )
-
-    def get_entry(self, get_entry_request: reqs.GetEntry) -> RESTClientResponse:
-        """
-        Get an entry from omnilake.
-
-        Keyword arguments:
-        get_entry_request -- The request to get an entry from omnilake.
-        """
-        return self.post(
-            body=get_entry_request.to_dict(),
-            path='/get_entry'
-        )
-
-    def index_entry(self, index_entry_req: reqs.IndexEntry) -> RESTClientResponse:
-        """
-        Index an entry into an archive in omnilake.
-
-        Keyword arguments:
-        copy_entry_request -- The request to copy an entry in omnilake.
-        """
-        return self.post(
-            body=index_entry_req.to_dict(),
-            path='/index_entry'
-        )
-    
-    def request_information(self, information_request: reqs.InformationRequest) -> RESTClientResponse:
-        """
-        Request information from omnilake.
-
-        Keyword arguments:
-        request_information_request -- The request to get information from omnilake.
-        """
-        return self.post(
-            body=information_request.to_dict(),
-            path='/request_information'
-        )
-
-    def score_response(self, score_response_request: reqs.ScoreResponse) -> RESTClientResponse:
-        """
-        Score a response in omnilake.
-
-        Keyword arguments:
-        score_response_request -- The request to score a response in omnilake.
-        """
-        return self.post(
-            body=score_response_request.to_dict(),
-            path='/score_response'
-        )
-
-    def update_archive(self, update_archive_request: reqs.UpdateArchive) -> RESTClientResponse:
-        """
-        Update an archive in omnilake.
-
-        Keyword arguments:
-        update_archive_request -- The request to update an archive in omnilake.
-        """
-        return self.post(
-            body=update_archive_request.to_dict(),
-            path='/update_archive'
-        )
-
-    def update_entry(self, update_entry_request: reqs.UpdateEntry) -> RESTClientResponse:
-        """
-        Update an entry in omnilake.
-
-        Keyword arguments:
-        update_entry_request -- The request to update an entry in omnilake.
-        """
-        return self.post(
-            body=update_entry_request.to_dict(),
-            path='/update_entry'
+            body=request.to_dict(),
+            path=request.path,
         )

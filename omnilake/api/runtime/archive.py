@@ -6,7 +6,13 @@ from typing import Optional
 from da_vinci.event_bus.client import EventPublisher
 from da_vinci.event_bus.event import Event as EventBusEvent
 
-from omnilake.api.runtime.construct import ChildAPI, Route
+from omnilake.api.runtime.construct import (
+    RequestAttribute,
+    RequestAttributeType,
+    RequestBody,
+    ChildAPI,
+    Route,
+)
 
 from omnilake.internal_lib.event_definitions import (
     CreateBasicArchiveBody,
@@ -18,11 +24,73 @@ from omnilake.tables.archives.client import ArchivesClient
 from omnilake.tables.jobs.client import Job, JobsClient
 
 
+class BasicArchiveConfiguration(RequestBody):
+    attribute_definitions = [
+        RequestAttribute(
+            'archive_type',
+            immutable_default='BASIC',
+        ),
+
+        RequestAttribute(
+            'retain_latest_originals_only',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            default=True,
+            optional=True,
+        ),
+    ]
+
+
+class VectorArchiveConfiguration(RequestBody):
+    attribute_definitions = [
+        RequestAttribute(
+            'archive_type',
+            immutable_default='VECTOR',
+        ),
+
+        RequestAttribute(
+            'retain_latest_originals_only',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            default=True,
+            optional=True,
+        ),
+
+        RequestAttribute(
+            'tag_hint_instructions',
+            optional=True,
+        ),
+    ]
+
+
+class CreateArchiveRequest(RequestBody):
+    attribute_definitions = [
+        RequestAttribute(
+            'archive_id',
+        ),
+        RequestAttribute(
+            'configuration',
+            supported_request_body_types=[BasicArchiveConfiguration, VectorArchiveConfiguration],
+        ),
+        RequestAttribute(
+            'description',
+            optional=True,
+        ),
+    ]
+
+
+class DescribeArchiveRequest(RequestBody):
+    attribute_definitions = [
+        RequestAttribute(
+            'archive_id',
+        ),
+    ]
+
+
 class ArchiveAPI(ChildAPI):
     routes = [
         Route(
             path='/create_archive',
             method_name='create_archive',
+            request_body=CreateArchiveRequest,
         ),
         Route(
             path='/describe_archive',
@@ -34,8 +102,7 @@ class ArchiveAPI(ChildAPI):
         ),
     ]
 
-    def create_archive(self, archive_id: str, description: str, retain_latest_originals_only: Optional[bool] = True,
-                       storage_type: Optional[str] = 'VECTOR', tag_hint_instructions: Optional[str] = None):
+    def create_archive(self, request: CreateArchiveRequest):
         """
         Create an archive
 
@@ -48,7 +115,9 @@ class ArchiveAPI(ChildAPI):
         """
         archives = ArchivesClient()
 
-        existing = archives.get(archive_id)
+        archive_id = request.get("archive_id")
+
+        existing = archives.get(archive_id=archive_id)
 
         if existing:
             return self.respond(
@@ -62,28 +131,39 @@ class ArchiveAPI(ChildAPI):
 
         jobs.put(job)
 
-        if storage_type == 'VECTOR':
+        configuration = request.get("configuration")
+
+        archive_type = configuration.get("archive_type")
+
+        description = request.get("description")
+
+        if archive_type == 'VECTOR':
             event = EventBusEvent(
                 event_type=CreateVectorArchiveBody.event_type,
                 body=CreateVectorArchiveBody(
                     archive_id=archive_id,
                     description=description,
                     job_id=job.job_id,
-                    retain_latest_originals_only=retain_latest_originals_only,
-                    tag_hint_instructions=tag_hint_instructions,
+                    retain_latest_originals_only=configuration.get("retain_latest_originals_only"),
+                    tag_hint_instructions=configuration.get("tag_hint_instructions"),
                 ).to_dict(),
             )
 
-        else:
+        elif archive_type == 'BASIC':
             event = EventBusEvent(
                 event_type=CreateBasicArchiveBody.event_type,
                 body=CreateBasicArchiveBody(
                     archive_id=archive_id,
                     description=description,
                     job_id=job.job_id,
-                    retain_latest_originals_only=retain_latest_originals_only,
-                    tag_hint_instructions=tag_hint_instructions,
+                    retain_latest_originals_only=configuration.get("retain_latest_originals_only"),
                 ).to_dict(),
+            )
+
+        else:
+            return self.respond(
+                body={"message": "Invalid archive type"},
+                status_code=400,
             )
 
         publisher = EventPublisher()

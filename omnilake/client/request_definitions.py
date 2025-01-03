@@ -1,168 +1,439 @@
-from datetime import datetime
-from dataclasses import asdict, dataclass, field
-from typing import Dict, List, Optional, Union
+from omnilake.client.client import (
+    RequestAttributeType,
+    RequestBodyAttribute,
+    RequestBody,
+)
 
 
-@dataclass
-class RequestSuperclass:
-    def to_dict(self):
-        """
-        Return the object as a dictionary.
-        """
-        return asdict(self)
+class AddEntry(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'content',
+        ),
+
+        RequestBodyAttribute(
+            'sources',
+            attribute_type=RequestAttributeType.LIST,
+        ),
+
+        RequestBodyAttribute(
+            'archive_id',
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'effective_on',
+            attribute_type=RequestAttributeType.DATETIME,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'original_of_source',
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'summarize',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            optional=True,
+        )
+    ]
+
+    path = '/add_entry'
 
 
-@dataclass
-class AddEntry(RequestSuperclass):
-    content: str
-    sources: List[str]
-    archive_id: Optional[str] = None
-    effective_on: Optional[str] = None # will be set to time of insertion if not provided
-    original_source: Optional[str] = None
-    summarize: Optional[bool] = False
+class AddSource(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'source_type',
+        ),
+
+        RequestBodyAttribute(
+            'source_arguments',
+            attribute_type=RequestAttributeType.OBJECT,
+        )
+    ]
+
+    path = '/add_source'
 
 
-@dataclass
-class AddSource(RequestSuperclass):
-    source_type: str
-    source_arguments: Dict
+class BasicArchiveConfiguration(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_type',
+            immutable_default='BASIC',
+        ),
+
+        RequestBodyAttribute(
+            'retain_latest_originals_only',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            default=True,
+            optional=True,
+        ),
+    ]
 
 
-@dataclass
-class CreateArchive(RequestSuperclass):
-    archive_id: str
-    description: str
-    retain_latest_originals_only: Optional[bool] = True # whether to retain only the latest original entries in the archive
-    storage_type: Optional[str] = 'VECTOR' # VECTOR or BASIC
-    tag_hint_instructions: Optional[str] = None # instructions for tagging entries ingested into the archive, only applies to VECTOR archives
+class VectorArchiveConfiguration(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_type',
+            immutable_default='VECTOR',
+        ),
+
+        RequestBodyAttribute(
+            'retain_latest_originals_only',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            default=True,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'tag_hint_instructions',
+            optional=True,
+        ),
+    ]
 
 
-@dataclass
-class CreateSourceType(RequestSuperclass):
-    name: str
-    required_fields: List[str] # list of required field names, used to generate the source ID
-    description: str = None
+class CreateArchive(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_id',
+        ),
+
+        RequestBodyAttribute(
+            'configuration',
+            attribute_type=RequestAttributeType.OBJECT,
+            supported_request_body_types=[BasicArchiveConfiguration, VectorArchiveConfiguration],
+        ),
+
+        RequestBodyAttribute(
+            'description',
+            optional=True,
+        ),
+    ]
+
+    path = '/create_archive'
 
 
-@dataclass
-class DeleteEntry(RequestSuperclass):
-    entry_id: str
-    force: Optional[bool] = False
+class CreateSourceType(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'name',
+        ),
+
+        RequestBodyAttribute(
+            'required_fields',
+            attribute_type=RequestAttributeType.LIST,
+        ),
+
+        RequestBodyAttribute(
+            'description',
+            optional=True,
+        )
+    ]
+
+    path = '/create_source_type'
 
 
-@dataclass
-class DeleteSource(RequestSuperclass):
-    source_id: str
-    source_type: str
-    force: Optional[bool] = False
+class DeleteEntry(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'entry_id',
+        ),
+    ]
+
+    path = '/delete_entry'
 
 
-@dataclass
-class DescribeArchive(RequestSuperclass):
-    archive_id: str
+class DeleteSource(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'source_id',
+        ),
+
+        RequestBodyAttribute(
+            'source_type',
+        )
+    ]
+
+    path = '/delete_source'
 
 
-@dataclass
-class DescribeEntry(RequestSuperclass):
-    entry_id: str
+class DescribeArchive(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_id',
+        )
+    ]
+
+    path = '/describe_archive'
 
 
-@dataclass
-class DescribeJob(RequestSuperclass):
-    job_id: str
-    job_type: str
+class DescribeEntry(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'entry_id',
+        )
+    ]
+
+    path = '/describe_entry'
 
 
-@dataclass
-class DescribeSource(RequestSuperclass):
-    source_id: str
-    source_type: str
+class DescribeJob(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'job_id',
+        ),
+
+        RequestBodyAttribute(
+            'job_type',
+        )
+    ]
+
+    path = '/describe_job'
 
 
-@dataclass
-class DescribeSourceType(RequestSuperclass):
-    name: str
+class DescribeSource(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'source_id',
+        ),
+
+        RequestBodyAttribute(
+            'source_type',
+        )
+    ]
+
+    path = '/describe_source'
 
 
-@dataclass
-class DescribeRequest(RequestSuperclass):
-    request_id: str
+class DescribeSourceType(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'name',
+        )
+    ]
+
+    path = '/describe_source_type'
 
 
-@dataclass
-class GetEntry(RequestSuperclass):
-    entry_id: str
+class DescribeLakeRequest(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'request_id',
+        )
+    ]
+
+    path = '/describe_lake_request'
 
 
-@dataclass
-class IndexEntry(RequestSuperclass):
-    archive_id: str
-    entry_id: str
+class GetEntry(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'entry_id',
+        )
+    ]
+
+    path = '/get_entry'
 
 
-@dataclass
-class BasicInformationRetrievalRequest:
-    archive_id: str
-    max_entries: int
-    prioritize_tags: Optional[List[str]] = None # These are calculated by the system if not provided
-    request_type: str = 'BASIC'
+class IndexEntry(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_id',
+        ),
+
+        RequestBodyAttribute(
+            'entry_id',
+        )
+    ]
+
+    path = '/index_entry'
 
 
-@dataclass
-class RelatedInformationRetrievalRequest:
-    related_request_id: str
-    request_type: str = 'RELATED'
+class BasicLookup(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_id',
+        ),
+
+        RequestBodyAttribute(
+            'max_entries',
+            attribute_type=RequestAttributeType.INTEGER,
+        ),
+
+        RequestBodyAttribute(
+            'request_type',
+            immutable_default='BASIC',
+        )
+    ]
 
 
-@dataclass
-class VectorInformationRetrievalRequest:
-    archive_id: str
-    max_entries: int # Must always be set by the requester
-    query_string: str = None
-    prioritize_tags: Optional[List[str]] = None # These are calculated by the system if not provided
-    request_type: str = 'VECTOR'
+class DirectLookup(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'resource_names',
+            attribute_type=RequestAttributeType.LIST,
+        )
+    ]
 
 
-@dataclass
-class InformationRequest(RequestSuperclass):
-    goal: str
-    retrieval_requests: List[Union[Dict, BasicInformationRetrievalRequest, RelatedInformationRetrievalRequest, VectorInformationRetrievalRequest]]
-    include_source_metadata: Optional[bool] = False
-    resource_names: Optional[List[str]] = None
-    responder_model_id: Optional[str] = None # system default used if not provided
-    responder_prompt: Optional[str] = None # system default used if not provided
-    summarization_algorithm: Optional[str] = 'STANDARD'
-    summarization_prompt: Optional[str] = None # system default used if not provided
-    summarization_model_id: Optional[str] = None # system default used if not provided
+class RelatedRequestLookup(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'related_request_id',
+        ),
 
-    def __post_init__(self):
-        normalized_requests = []
-
-        for req in self.retrieval_requests:
-            if isinstance(req, dict):
-                normalized_requests.append(req)
-
-            else:
-                normalized_requests.append(asdict(req))
-
-        self.requests = normalized_requests
+        RequestBodyAttribute(
+            'request_type',
+            immutable_default='RELATED',
+        )
+    ]
 
 
-@dataclass
-class ScoreResponse(RequestSuperclass):
-    request_id: str
-    score: float
-    score_comment: Optional[str] = None
+class VectorLookup(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_id',
+        ),
+
+        RequestBodyAttribute(
+            'max_entries',
+            attribute_type=RequestAttributeType.INTEGER,
+        ),
+
+        RequestBodyAttribute(
+            'query_string',
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'prioritize_tags',
+            attribute_type=RequestAttributeType.LIST,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'request_type',
+            immutable_default='VECTOR',
+        )
+    ]
 
 
-@dataclass
-class UpdateArchive(RequestSuperclass):
-    archive_id: str
-    description: str = None
-    tag_hint_instructions: Optional[str] = None
+class SummarizationAlgorithm(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'algorithm',
+            immutable_default='SUMMARIZATION',
+        ),
+
+        RequestBodyAttribute(
+            'include_source_metadata',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'model_id',
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'prompt',
+            optional=True,
+        ),
+    ]
 
 
-@dataclass
-class UpdateEntry(RequestSuperclass):
-    entry_id: str
-    content: str
+class ResponseConfig(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'model_id',
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'prompt',
+            optional=True,
+        )
+    ]
+
+
+class LakeRequest(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'lookup_instructions',
+            attribute_type=RequestAttributeType.OBJECT_LIST,
+            supported_request_body_types=[BasicLookup, DirectLookup, RelatedRequestLookup, VectorLookup],
+        ),
+
+        RequestBodyAttribute(
+            'processing_instructions',
+            attribute_type=RequestAttributeType.OBJECT,
+            supported_request_body_types=SummarizationAlgorithm,
+        ),
+
+        RequestBodyAttribute(
+            'response_config',
+            attribute_type=RequestAttributeType.OBJECT,
+            supported_request_body_types=ResponseConfig,
+            default={},
+            optional=True,
+        )
+    ]
+
+    path = '/lake_request'
+
+
+class ScoreResponse(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'request_id',
+        ),
+
+        RequestBodyAttribute(
+            'score',
+            attribute_type=RequestAttributeType.FLOAT,
+        ),
+
+        RequestBodyAttribute(
+            'score_comment',
+            optional=True,
+        )
+    ]
+
+    path = '/score_response'
+
+
+class UpdateArchive(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_id',
+        ),
+
+        RequestBodyAttribute(
+            'description',
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'tag_hint_instructions',
+            optional=True,
+        )
+    ]
+
+    path = '/update_archive'
+
+
+class UpdateEntry(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'content',
+        ),
+
+        RequestBodyAttribute(
+            'entry_id',
+        )
+    ]
+
+    path = '/update_entry'
