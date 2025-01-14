@@ -14,11 +14,6 @@ from da_vinci.core.orm import (
 from da_vinci.core.immutable_object import ObjectBody
 
 
-class LakeRequestType(StrEnum):
-    INCLUSIVE = 'INCLUSIVE'
-    EXCLUSIVE = 'EXCLUSIVE'
-
-
 class LakeRequestStage(StrEnum):
     VALIDATING = 'VALIDATING'
     LOOKUP = 'LOOKUP'
@@ -49,10 +44,10 @@ class LakeRequest(TableObject):
     attributes = [
         TableObjectAttribute(
             name='ai_invocation_ids',
-            attribute_type=TableObjectAttributeType.STRING_LIST,
+            attribute_type=TableObjectAttributeType.STRING_SET,
             description='The AI invocations during the lake request.',
             optional=True,
-            default=[],
+            default=set(),
         ),
 
         TableObjectAttribute(
@@ -138,7 +133,7 @@ class LakeRequest(TableObject):
 
     def __init__(self, job_id: str, job_type: str, response_config: Union[Dict, ObjectBody],
                  lookup_instructions: List[Union[Dict, ObjectBody]], processing_instructions: Union[Dict, ObjectBody],
-                 ai_invocation_ids: Optional[List[str]] = None, lake_request_id: Optional[str] = None,
+                 ai_invocation_ids: Optional[Set] = None, lake_request_id: Optional[str] = None,
                  remaining_lookups: Optional[int] = 0, requested_on: Optional[datetime] = None,
                  request_status: Optional[LakeRequestStatus] = None, response_completed_on: Optional[datetime] = None,
                  response_entry_id: Optional[str] = None, response_sources: Optional[Set] = None,
@@ -207,6 +202,34 @@ class LakeRequestsClient(TableClient):
             app_name=app_name,
             deployment_id=deployment_id,
             default_object_class=LakeRequest,
+        )
+
+    def add_ai_invocation_ids(self, ai_invocation_ids: Union[List[str], str], lake_request_id: str) -> None:
+        """
+        Adds an AI invocation id to the lake request
+
+        Keyword arguments:
+        ai_invocation_ids -- The AI invocation ID
+        lake_request_id -- The request ID of the compaction job context
+        """
+        update_expression = "ADD AIInvocationIds :results"
+
+        ai_invocation_ids = ai_invocation_ids
+
+        if not isinstance(ai_invocation_ids, list):
+            ai_invocation_ids = [ai_invocation_ids]
+
+        expression_attribute_values = {
+            ':results': {'SS': ai_invocation_ids},
+        }
+
+        self.client.update_item(
+            TableName=self.table_endpoint_name,
+            Key={
+                'LakeRequestId': {'S': lake_request_id},
+            },
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expression_attribute_values,
         )
 
     def add_lookup_results(self, lake_request_id: str, results: Union[List, Set]) -> int:

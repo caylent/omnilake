@@ -1,4 +1,6 @@
-"""Vector storage service event types"""
+"""
+Vector storage service event types
+"""
 
 from da_vinci.core.immutable_object import (
     ObjectBodySchema,

@@ -1,65 +1,11 @@
 """
 Handles coordinating LakeRequest Chains
-
-Example Chain:
-```
-{
-    "requests": [
-        {
-            "name": "request_1",
-            "lookup_instructions": [
-                {
-                    "archive_id": "omnilake",
-                    "max_entries": 20,
-                    "query_string": "What is OmniLake?",
-                    "prioritize_tags": None,
-                    "request_type": "VECTOR"
-                }
-            ],
-            "processing_instructions": {
-                "goal": "Describe what OmniLake is and how it works",
-                "include_source_metadata": False,
-                "model_id": None,
-                "processor_type": "SUMMARIZATION",
-                "prompt": None
-            },
-            "response_config": {
-                "destination_archive_id": None,
-                "goal": "Anwer the following question: What is OmniLake?",
-                "model_id": None,
-                "response_type": "SIMPLE"
-            }
-        },
-        {
-            "name": "request_1",
-            "lookup_instructions": [
-                {
-                    "entry_id": "REF:response_1",
-                    "request_type": "DIRECT_ENTRY"
-                }
-            ],
-            "processing_instructions": {
-                "goal": "How would OmniLake help build scalable AI applications?",
-                "include_source_metadata": False,
-                "model_id": None,
-                "processor_type": "SUMMARIZATION",
-                "prompt": None
-            },
-            "response_config": {
-                "destination_archive_id": None,
-                "goal": "How would OmniLake help build scalable AI applications?",
-                "model_id": None,
-                "response_type": "SIMPLE"
-            }
-        }
-    ]
-}
-```
 """
 import logging
 
+from copy import deepcopy
 from datetime import datetime, UTC as utc_tz
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 from da_vinci.core.immutable_object import (
     ObjectBody,
@@ -74,17 +20,19 @@ from da_vinci.event_bus.event import Event as EventBusEvent
 
 from da_vinci.exception_trap.client import ExceptionReporter
 
+from omnilake.internal_lib.clients import RawStorageManager
 from omnilake.internal_lib.event_definitions import (
-    LakeRequestEventBodySchema,
     LakeChainRequestEventBodySchema,
     LakeCompletionEventBodySchema,
-)
-
-from omnilake.services.request_manager.runtime.primitive_lookup import (
-    DirectEntryLookupSchema,
+    LakeRequestEventBodySchema,
 )
 
 from omnilake.tables.jobs.client import JobsClient, JobStatus
+from omnilake.tables.lake_chain_requests.client import (
+    LakeChainRequest,
+    LakeChainRequestsClient,
+    LakeChainRequestStatus,
+)
 from omnilake.tables.lake_requests.client import (
     LakeRequest,
     LakeRequestsClient,
@@ -93,15 +41,68 @@ from omnilake.tables.lake_requests.client import (
 )
 
 # Local imports
-from omnilake.services.request_manager.tables.lake_request_chains.client import (
-    LakeRequestChain,
-    LakeRequestChainsClient,
+from omnilake.services.request_manager.runtime.chain_validation import (
+    ChainNode,
+    ValidateChain,
+)
+from omnilake.services.request_manager.runtime.request_init import LakeRequestInit
+from omnilake.services.request_manager.runtime.response_validation import validate_response
+
+from omnilake.services.request_manager.tables.lake_chain_coordinated_lake_requests.client import (
+    LakeChainCoordinatedLakeRequest,
+    LakeChainCoordinatedLakeRequestsClient,
+    CoordinatedLakeRequestStatus,
+    CoordinatedLakeRequestValidationStatus,
 )
 
-from omnilake.services.request_manager.tables.lake_request_chain_running_requests.client import (
-    LakeRequestChainRunningRequest,
-    LakeRequestChainRunningRequestsClient,
-)
+
+class LakeChainRequestValidationConditionSchema(ObjectBodySchema):
+    """
+    Represents a validation condition for a LakeRequest Chain
+    """
+    attributes = [
+        SchemaAttribute(
+            name="lake_request_name",
+            type=SchemaAttributeType.STRING,
+            required=False
+        ),
+
+        SchemaAttribute(
+            name="terminate_chain",
+            type=SchemaAttributeType.BOOLEAN,
+            required=False
+        ),
+    ]
+
+
+class LakeChainRequestValidationSchema(ObjectBodySchema):
+    """
+    Represents a validation schema for a LakeRequest Chain
+    """
+    attributes = [
+        SchemaAttribute(
+            name="model_id",
+            type=SchemaAttributeType.STRING,
+            required=False
+        ),
+        SchemaAttribute(
+            name="on_failure",
+            type=SchemaAttributeType.OBJECT,
+            required=False,
+            object_schema=LakeChainRequestValidationConditionSchema
+        ),
+        SchemaAttribute(
+            name="on_success",
+            type=SchemaAttributeType.OBJECT,
+            required=False,
+            object_schema=LakeChainRequestValidationConditionSchema,
+        ),
+        SchemaAttribute(
+            name="prompt",
+            type=SchemaAttributeType.STRING,
+            required=False
+        ),
+    ]
 
 
 class LakeChainRequestSchema(ObjectBodySchema):
@@ -109,10 +110,24 @@ class LakeChainRequestSchema(ObjectBodySchema):
     Represents a request in a LakeRequest Chain
     """
     attributes = [
-        SchemaAttribute(name="lookup_instructions", type=SchemaAttributeType.OBJECT_LIST),
-        SchemaAttribute(name="name", type=SchemaAttributeType.STRING),
-        SchemaAttribute(name="processing_instructions", type=SchemaAttributeType.OBJECT),
-        SchemaAttribute(name="response_config", type=SchemaAttributeType.OBJECT),
+        SchemaAttribute(
+            name="conditional",
+            type=SchemaAttributeType.BOOLEAN
+        ),
+        SchemaAttribute(
+            name="lake_request",
+            type=SchemaAttributeType.OBJECT
+        ),
+        SchemaAttribute(
+            name="name",
+            type=SchemaAttributeType.STRING
+        ),
+        SchemaAttribute(
+            name="validation",
+            type=SchemaAttributeType.OBJECT,
+            required=False,
+            object_schema=LakeChainRequestValidationSchema,
+        ),
     ]
 
 
@@ -135,32 +150,338 @@ class LakeChainExecutedRequestSchema(ObjectBodySchema):
     ]
 
 
+class ChainReference:
+    REFERENCE_PREFIX = "REF:"
+
+    SUPPORTED_REFERENCE_TYPES = [
+        "response_id", # Replaces the reference with the Lake Request ID of the referenced response
+        "response_body", # Replaces the reference with the content of the referenced response
+    ]
+
+    def __init__(self, reference_str: str):
+        """
+        Initializes a new ChainReference object.
+
+        Keyword Arguments:
+        reference -- The reference to load
+        """
+        if not self.is_reference(reference_str):
+            raise ValueError(f"Invalid reference: {reference_str}")
+
+        self.full_reference_str = reference_str
+
+        self.reference_str = reference_str[len(self.REFERENCE_PREFIX):]
+
+        # Splits a reference <lake_request_id>.<lake_request_type> (e.g. previous_request.response_id)
+        try:
+            self.reference_request_name, self.reference_request_type = self.reference_str.split('.')
+        except ValueError:
+            raise ValueError(f"Invalid reference: '{reference_str}' expected format: <request_name>.<request_type>")
+
+        if self.reference_request_type not in self.SUPPORTED_REFERENCE_TYPES:
+            raise ValueError(f"Unsupported reference type: {self.reference_request_type}")
+
+    def _load_response_body(self, request_id: str) -> str:
+        """
+        Loads the response body of the given request
+        """
+        lake_requests_client = LakeRequestsClient()
+
+        lake_request = lake_requests_client.get(lake_request_id=request_id)
+
+        logging.debug(f"Loaded lake request: {lake_request}")
+
+        response_entry_id = lake_request.response_entry_id
+
+        storage_manager_client = RawStorageManager()
+
+        entry_resp = storage_manager_client.get_entry(entry_id=response_entry_id)
+
+        content = entry_resp.response_body["content"]
+
+        logging.debug(f"Loaded response content for {response_entry_id}: {content}")
+
+        return content
+
+    def dereference(self, request_name_to_id_map: Dict[str, str]) -> str:
+        """
+        Returns the dereferenced value of the reference
+
+        Keyword Arguments:
+        request_name_to_id_map -- A map of request names to their IDs
+        """
+        if self.reference_request_name not in request_name_to_id_map:
+            raise ValueError(f"Could not find request ID for request name: {self.reference_request_name}")
+
+        request_id = request_name_to_id_map[self.reference_request_name]
+
+        if self.reference_request_type == "response_id":
+            return request_id
+
+        return self._load_response_body(request_id=request_id)
+
+    @classmethod
+    def is_reference(cls, reference_str: str) -> bool:
+        """
+        Returns True if the given reference is a reference to a previously executed request
+        """
+        return reference_str.startswith(cls.REFERENCE_PREFIX)
+
+
+class ChainRequest:
+    def __init__(self, request: ObjectBody):
+        """
+        Initializes a new ChainRequest object.
+
+        Keyword Arguments:
+        request -- The request to load
+        """
+        logging.debug(f"Loading request: {request}")
+
+        self.request = request.map_to(new_schema=LakeChainRequestSchema)
+
+        logging.debug(f"Loaded request: {self.request.to_dict()}")
+
+        self.conditional = self.request["conditional"]
+
+        validation = self.request.get("validation")
+
+        self.validation_instructions = validation.get("prompt") if validation else None
+
+        self.validation_model_id = validation.get("model_id") if validation else None
+
+        self.on_failure = {}
+
+        self.on_success = {}
+
+        if validation:
+            validation_body = ObjectBody(body=validation, schema=LakeChainRequestValidationSchema)
+
+            self.on_failure = validation_body.get("on_failure") or {}
+
+            self.on_success = validation_body.get("on_success") or {}
+
+        self.raw_lake_request = self.request["lake_request"]
+
+        self.name = self.request["name"]
+
+        # Will be used to store any names of requests that this request depends on directly for references
+        self.direct_references = self.referenced_chain_request_names(lake_request=self.raw_lake_request)
+
+        self.dep_tree_node = ChainNode(
+            name=self.name,
+            conditional=self.conditional,
+            direct_references=self.direct_references,
+            on_failure_reference=self.on_failure.get("lake_request_name"),
+            on_success_reference=self.on_success.get("lake_request_name"),
+        )
+
+    @staticmethod
+    def referenced_attribute_names(instruction_obj: Union[ObjectBody, Dict]) -> List[str]:
+        """
+        Returns the names of all attributes that are references in the given instruction object
+
+        Keyword Arguments:
+        instruction_obj -- The instruction object to search for references
+        """
+        references = []
+
+        instruction_obj_dict = instruction_obj
+
+        if isinstance(instruction_obj, ObjectBody):
+            instruction_obj_dict = instruction_obj.to_dict()
+
+        logging.debug(f"Processing instruction object for references: {instruction_obj_dict}")
+
+        for attr in instruction_obj_dict:
+            logging.debug(f"Checking attribute {attr} for references")
+
+            attr_val = instruction_obj_dict[attr] 
+
+            logging.debug(f"Attribute value: {attr_val}")
+
+            if not isinstance(attr_val, str):
+                logging.debug(f"Attribute value is not a string ... skipping")
+                continue
+
+            if ChainReference.is_reference(attr_val):
+                logging.debug(f"Detected reference: {attr_val}")
+
+                references.append(attr)
+
+            else:
+                logging.debug(f"Attribute value is not a reference ... skipping")
+
+        return references
+
+    @classmethod
+    def referenced_chain_request_names(cls, lake_request: Union[ObjectBody, Dict]) -> List[str]:
+        """
+        Returns a list of all references in the given lake request
+
+        Keyword Arguments:
+        lake_request -- The lake request to search for references
+        """
+        lake_request_dict = lake_request
+        
+        if isinstance(lake_request, ObjectBody):
+            lake_request_dict = lake_request.to_dict()
+
+        logging.debug(f"Processing lake request for references: {lake_request_dict}")
+
+        referenced_names = set()
+
+        # Handle Lookup Instructions
+        for lookup_instruction in lake_request_dict["lookup_instructions"]:
+
+            req_type = lookup_instruction["request_type"]
+
+            logging.debug(f"Checking lookup instruction of type {req_type} for references")
+
+            ref_attr_names = cls.referenced_attribute_names(lookup_instruction)
+
+            if ref_attr_names:
+                for ref_attr_name in ref_attr_names:
+                    reference = ChainReference(lookup_instruction[ref_attr_name])
+
+                    referenced_names.add(reference.reference_request_name)
+
+        for instruction_name in ["processing_instructions", "response_config"]:
+            logging.debug(f"Checking instruction set {instruction_name} in {lake_request_dict} for references")
+
+            instruction = lake_request_dict[instruction_name]
+
+            logging.debug(f"Processing instruction set for references: {instruction}")
+
+            ref_attr_names = cls.referenced_attribute_names(instruction)
+
+            logging.debug(f"Referenced attribute names: {ref_attr_names}")
+
+            if ref_attr_names:
+                for ref_attr_name in ref_attr_names:
+                    reference = ChainReference(instruction[ref_attr_name])
+
+                    referenced_names.add(reference.reference_request_name)
+
+        logging.debug(f"Referenced names: {referenced_names}")
+
+        return referenced_names
+
+    def can_execute(self, completed_executed_request_names: List[str]) -> bool:
+        """
+        Returns True if the request can be executed
+
+        Keyword Arguments:
+        completed_executed_request_names -- The names of all requests that have been executed
+        """
+        if not self.direct_references:
+            return True
+        
+        return all([ref in completed_executed_request_names for ref in self.direct_references])
+
+    def dereferenced_request(self, request_name_to_id_map: Dict[str, str]) -> ObjectBody:
+        """
+        Returns the LakeRequest object with all references dereferenced
+
+        Keyword Arguments:
+        request_name_to_id_map -- A map of request names to their IDs
+        """
+        new_body = {
+            "lookup_instructions": [],
+            "processing_instructions": {}, 
+            "response_config": {},
+        }
+
+        # Convert to Dict to enable mutation
+        raw_lake_request = self.raw_lake_request.to_dict()
+
+        logging.debug(f"Dereferencing request '{raw_lake_request}' using map: {request_name_to_id_map}")
+
+        lookup_instruction = raw_lake_request["lookup_instructions"]
+
+        for instruction in lookup_instruction:
+            lookup_instruction = {}
+
+            referenced_attr_names = self.referenced_attribute_names(instruction_obj=instruction)
+
+            if not referenced_attr_names:
+                new_body["lookup_instructions"].append(instruction)
+
+                continue
+
+            new_instruction_body = deepcopy(instruction)
+
+            for attr_name in referenced_attr_names:
+                reference = ChainReference(instruction[attr_name])
+
+                new_instruction_body[attr_name] = reference.dereference(request_name_to_id_map=request_name_to_id_map)
+
+            new_body["lookup_instructions"].append(new_instruction_body)
+
+        for instruction_set in ["processing_instructions", "response_config"]:
+            new_instruction_body = deepcopy(raw_lake_request[instruction_set])
+
+            for attr_name in self.referenced_attribute_names(instruction_obj=new_instruction_body):
+                reference = ChainReference(new_instruction_body[attr_name])
+
+                new_instruction_body[attr_name] = reference.dereference(request_name_to_id_map=request_name_to_id_map)
+
+            new_body[instruction_set] = new_instruction_body
+
+        logging.debug(f"Dereferenced request: {new_body}")
+
+        return ObjectBody(body=new_body)
+
+
+def calculate_unexecuted_request_names(chain_request_id: str, chain: List[Union[Dict[str, str], ObjectBody]]):
+    """
+    Calculates the requests that have not been executed
+
+    Keyword Arguments:
+    chain_request_id -- The ID of the chain request
+    chain -- The chain of requests to check
+    """
+    request_names = set([req["name"] for req in chain])
+
+    coordinated_requests = LakeChainCoordinatedLakeRequestsClient()
+
+    all_coordinated = coordinated_requests.get_all_by_chain_request_id(chain_request_id=chain_request_id)
+
+    all_coordinated_names = set([req.chain_request_name for req in all_coordinated])
+
+    return request_names - all_coordinated_names
+
+
 class ChainCoordinator:
     """
     Handles coordinating LakeRequest Chains
     """
-    REFERENCE_PREFIX = "REF:"
-
     def __init__(self, chain: ObjectBody, chain_request_id: Optional[str] = None,
-                 executed_requests: Optional[List[ObjectBody]] = None):
+                 conditions_met_requests: Optional[List[str]] = None, executed_requests: Optional[Dict[str, str]] = None):
         """
         Initializes a new ChainCoordinator object.
 
         Keyword Arguments:
         chain -- The full chain of requests to be executed
         chain_request_id -- The ID of the request chain
-        executed_requests -- The list of requests that have already been
+        conditions_met_requests -- The list of requests that have had their conditions met
+        executed_requests -- The mappping of previously executed requests
         """
+        logging.debug(f"Loading chain: {chain}")
+
         self.chain = chain.map_to(new_schema=LakeChainSchema)
+
+        requests = self.chain["requests"]
+
+        self.requests = [ChainRequest(request=req) for req in requests]
+
+        self.conditions_met_requests = conditions_met_requests or []
 
         self.executed_requests = {}
 
         self.chain_request_id = chain_request_id
 
-        executed_reqs = [req.map_to(new_schema=LakeChainExecutedRequestSchema) for req in executed_requests] or []
-
-        for exec_req in executed_reqs:
-            self.executed_requests[exec_req["name"]] = exec_req["lake_request_id"]
+        self.executed_requests = executed_requests or {}
 
         self.event_publisher = EventPublisher()
 
@@ -172,34 +493,23 @@ class ChainCoordinator:
         Keyword Arguments:
         chain_request_id -- The ID of the chain request to load
         """
-        chain_requests = LakeRequestChainsClient()
+        logging.debug(f"Loading chain coordinator for chain request ID: {chain_request_id}")
 
-        chain_request = chain_requests.get(lake_chain_request_id=chain_request_id, consistent_read=True)
+        chain_requests = LakeChainRequestsClient()
+
+        chain_request = chain_requests.get(chain_request_id=chain_request_id, consistent_read=True)
+
+        if not chain_request:
+            raise ValueError(f"Could not find chain request with ID: {chain_request_id}")
+
+        logging.debug(f"Loaded chain request: {chain_request.to_dict()}")
 
         return cls(
-            chain=chain_request.original_request_body,
+            chain=ObjectBody(body={"requests": chain_request.chain}),
+            chain_request_id=chain_request_id,
+            conditions_met_requests=chain_request.conditions_met_requests,
             executed_requests=chain_request.executed_requests,
         )
-
-    def get_referenced_id(self, reference: str) -> str:
-        """
-        Returns the id of the referenced request
-
-        Keyword Arguments:
-        reference -- The reference to load
-        """
-        reference_name = reference[len(self.REFERENCE_PREFIX):]
-
-        return self.executed_requests.get(reference_name)
-
-    def get_referenced_name(self, reference: str) -> str:
-        """
-        Returns the name of the referenced request
-
-        Keyword Arguments:
-        reference -- The reference to load
-        """
-        return reference[len(self.REFERENCE_PREFIX):]
 
     def has_executed(self, request_name: str) -> bool:
         """
@@ -210,60 +520,48 @@ class ChainCoordinator:
         """
         return request_name in self.executed_requests
 
-    def is_reference(self, reference: str) -> bool:
-        """
-        Returns True if the given reference is a reference to a previously executed request
-        """
-        return reference.startswith(self.REFERENCE_PREFIX)
-
-    def _next_available_request_group(self) -> List[ObjectBody]: 
+    def _next_available_request_group(self) -> Dict[str, Dict[str, Union[str, ObjectBody]]]: 
         """
         Returns the next group of lake requests that can be executed
         """
-        next_group = []
+        logging.debug("Determining next group of requests to execute ...")
+        next_group = {}
 
-        for request in self.chain["requests"]:
-            logging.debug(f"Checking request for availability to kick-off: {request['name']}")
+        unexecuted_names = calculate_unexecuted_request_names(
+            chain=self.chain["requests"],
+            chain_request_id=self.chain_request_id,
+        )
 
-            if self.has_executed(request["name"]):
+        completed_executed_request_names = list(self.executed_requests.keys())
+
+        for request in self.requests:
+            # Continue for already executed requests
+            if request.name not in unexecuted_names:
+                logging.debug(f"Request {request.name} has already been executed ... skipping")
+
                 continue
 
-            request_obj = request
+            if request.can_execute(completed_executed_request_names=completed_executed_request_names):
+                if request.conditional:
+                    logging.debug(f"Request {request.name} is conditional ... checking if it can be executed")
 
-            updated_instructions = []
+                    if request.name in self.conditions_met_requests:
+                        next_group[request.name] = {
+                            "request": request.dereferenced_request(request_name_to_id_map=self.executed_requests),
+                            "validation_instructions": request.validation_instructions,
+                            "validation_model_id": request.validation_model_id,
+                        }
 
-            for lookup_instruction in request["lookup_instructions"]:
+                        continue
 
-                # If the request is not a direct entry, it doesn't support references
-                if lookup_instruction["request_type"] != "DIRECT_ENTRY":
-                    updated_instructions.append(lookup_instruction)
+                else:
+                    logging.debug(f"Request {request.name} is not conditional and dependencies met ... executing")
 
-                    continue
-
-                if self.is_reference(lookup_instruction["entry_id"]):
-
-                    referenced_name = self.get_referenced_name(lookup_instruction["entry_id"])
-
-                    if self.has_executed(request_name=referenced_name):
-                        updated_attr = {"entry_id": self.get_referenced_id(lookup_instruction["entry_id"])}
-
-                        updated_instructions.append(lookup_instruction.map_to(
-                            new_schema=DirectEntryLookupSchema,
-                            updated_attributes=updated_attr
-                        ))
-
-                        next_group.append()
-
-                    else:
-                        # If the referenced request has not been executed, then we can't execute this request yet
-                        break
-
-            request_obj = request_obj.map_to(
-                new_schema=LakeChainRequestSchema,
-                updated_attributes={"lookup_instructions": updated_instructions}
-            ) 
-
-            next_group.append(request_obj)
+                    next_group[request.name] = {
+                        "request": request.dereferenced_request(request_name_to_id_map=self.executed_requests),
+                        "validation_instructions": request.validation_instructions,
+                        "validation_model_id": request.validation_model_id,
+                    }
 
         return next_group
 
@@ -290,18 +588,24 @@ class ChainCoordinator:
 
         lake_requests = LakeRequestsClient()
 
-        running_requests = LakeRequestChainRunningRequestsClient()
+        coordinated_requests = LakeChainCoordinatedLakeRequestsClient()
 
-        for request in next_group:
+        for req_name, request_details in next_group.items():
+            logging.debug(f"Executing request '{req_name}': {request_details}")
+
+            request = request_details["request"]
+
             child_job = parent_job.create_child(job_type="LAKE_REQUEST")
+
+            jobs.put(child_job)
 
             lake_request = LakeRequest(
                 job_id=child_job.job_id,
                 job_type=child_job.job_type,
                 last_known_stage=LakeRequestStage.VALIDATING,
-                lookup_instructions=request.get('lookup_instructions'),
-                processing_instructions=request.get('processing_instructions'),
-                response_config=request.get('response_config'),
+                lookup_instructions=request["lookup_instructions"],
+                processing_instructions=request["processing_instructions"],
+                response_config=request["response_config"],
             )
 
             lake_requests.put(lake_request)
@@ -311,9 +615,9 @@ class ChainCoordinator:
                     "job_id": child_job.job_id,
                     "job_type": child_job.job_type,
                     "lake_request_id": lake_request.lake_request_id,
-                    "lookup_instructions": request.get('lookup_instructions'),
-                    "processing_instructions": request.get('processing_instructions'),
-                    "response_config": request.get('response_config'),
+                    "lookup_instructions": request["lookup_instructions"],
+                    "processing_instructions": request["processing_instructions"],
+                    "response_config": request["response_config"],
                 },
                 schema=LakeRequestEventBodySchema,
             )
@@ -325,15 +629,35 @@ class ChainCoordinator:
                 )
             )
 
-            running_request = LakeRequestChainRunningRequest(
+            # Workaround to ensure the chain request id is set since it isn't required to initialize the object
+            if not self.chain_request_id:
+                raise ValueError("Chain request ID not set")
+
+            coordinated_request = LakeChainCoordinatedLakeRequest(
                 chain_request_id=self.chain_request_id,
-                chain_request_name=request["name"],
+                chain_request_name=req_name,
+                execution_status=CoordinatedLakeRequestStatus.RUNNING,
                 lake_request_id=lake_request.lake_request_id,
+                validation_instructions=request_details["validation_instructions"],
+                validation_model_id=request_details["validation_model_id"],
             )
 
-            running_requests.put(running_request)
+            coordinated_requests.put(coordinated_request)
 
         return len(next_group)
+
+    def request_by_name(self, name: str):
+        """
+        Returns the request with the given name
+
+        Keyword Arguments:
+        name -- The name of the request to retrieve
+        """
+        for request in self.requests:
+            if request.name == name:
+                return request
+
+        return None
 
     def to_dict(self):
         """
@@ -344,12 +668,59 @@ class ChainCoordinator:
             "executed_requests": self.executed_requests,
         }
 
+    def validate_chain(self):
+        """
+        Validates the chain
+        """
+        # Validate the chain dependency and execution structure
+        ValidateChain()(chain_nodes=[req.dep_tree_node for req in self.requests])
+
+        # Validate each LakeRequest in the chain
+        lk_req_init = LakeRequestInit()
+
+        for request in self.requests:
+            lk_req_init.validate(body=request.raw_lake_request)
+
+
+def __close_chain(chain: LakeChainRequest, chain_status: LakeChainRequestStatus, job_status: JobStatus):
+    """
+    Closes out a chain request
+
+    Keyword Arguments:
+    chain -- The chain request to close
+    chain_status -- The status to set the chain to
+    job_status -- The status to set the parent job to
+    """
+    jobs = JobsClient()
+
+    parent_job = jobs.get(job_id=chain.job_id, job_type=chain.job_type)
+
+    parent_job.status = job_status
+
+    end_time = datetime.now(tz=utc_tz)
+
+    parent_job.ended = end_time
+
+    jobs.put(parent_job)
+
+    chain.ended = end_time
+
+    chain.chain_execution_status = chain_status
+
+    chain.unexecuted_request_names = calculate_unexecuted_request_names(
+        chain=chain.chain,
+        chain_request_id=chain.chain_request_id,
+    )
+
+    chains = LakeChainRequestsClient()
+
+    chains.put(chain)
+
 
 _FN_NAME = 'omnilake.services.request_manager.chain_coordinator.handle_lake_response'
 
 
-@fn_event_response(function_name=_FN_NAME, exception_reporter=ExceptionReporter(),
-                   logger=Logger(_FN_NAME))
+@fn_event_response(function_name=_FN_NAME, exception_reporter=ExceptionReporter(), logger=Logger(_FN_NAME))
 def handle_lake_response(event, context):
     """
     Handles all lake request completion events
@@ -365,68 +736,159 @@ def handle_lake_response(event, context):
 
     lake_request_id = event_body["lake_request_id"]
 
-    running_requests = LakeRequestChainRunningRequestsClient()
+    coordinated_requests = LakeChainCoordinatedLakeRequestsClient()
 
-    running_request = running_requests.get(lake_request_id=lake_request_id)
+    running_request = coordinated_requests.get_by_lake_request_id(lake_request_id=lake_request_id)
 
     if not running_request:
-        logging.debug(f"Could not find running request for lake request id {lake_request_id}, no chain to coordinate")
+        logging.debug(f"Could not find running request for lake request id {lake_request_id}, nothing to coordinate")
 
         return
 
-    chains = LakeRequestChainsClient()
+    lake_requests = LakeRequestsClient()
 
-    remaining_num_procs = chains.record_lake_request_results(
+    lake_request = lake_requests.get(lake_request_id=lake_request_id)
+
+    running_request.execution_status = CoordinatedLakeRequestStatus.COMPLETED
+
+    if lake_request.request_status == LakeRequestStatus.FAILED:
+        running_request.execution_status = CoordinatedLakeRequestStatus.FAILED
+
+    coordinated_requests.put(running_request=running_request)
+
+    chains = LakeChainRequestsClient()
+
+    # Check if the Lake Request failed
+    if lake_request.request_status != LakeRequestStatus.COMPLETED:
+        logging.debug("Lake request did not complete successfully ... failing chain")
+
+        chain = chains.get(lake_chain_request_id=running_request.chain_request_id)
+
+        __close_chain(chain=chain, chain_status=LakeChainRequestStatus.FAILED, job_status=JobStatus.FAILED)
+
+        return
+
+    # Could be re-evaluated for redundancy. Using updates to the chain request since this
+    # is potentially being called by multiple instances of the function
+    chains.record_lake_request_results(
+        chain_request_id=running_request.chain_request_id,
         lake_request_id=lake_request_id,
         reference_name=running_request.chain_request_name,
-        request_chain_id=running_request.chain_request_id,
     )
 
-    # Exit if there are still other lake requests to wait on
-    if remaining_num_procs != 0:
-        logging.debug("Still waiting on other lake requests to complete ... nothing to do")
+    coordinator = ChainCoordinator.from_chain_request_id(chain_request_id=running_request.chain_request_id)
+
+    # Check if the request is a validation request
+    if running_request.validation_instructions:
+        logging.debug("Request is a validation request ... executing validation")
+
+        req_info = coordinator.request_by_name(name=running_request.chain_request_name)
+
+        chain_details = chains.get(chain_request_id=running_request.chain_request_id)
+
+        validation_status = validate_response(
+            parent_job_id=chain_details.job_id,
+            parent_job_type=chain_details.job_type,
+            lake_request_id=chain_details.executed_requests[req_info.name],
+            validation_instructions=running_request.validation_instructions,
+            validation_model_id=running_request.validation_model_id,
+        )
+
+        running_request.validation_status = validation_status
+
+        coordinated_requests.put(running_request)
+
+        if validation_status:
+            _v_status_to_body_map = {
+                CoordinatedLakeRequestValidationStatus.FAILURE: req_info.on_failure,
+                CoordinatedLakeRequestValidationStatus.SUCCESS: req_info.on_success,
+            }
+
+            validation_body = _v_status_to_body_map[validation_status]
+
+            if validation_body.get("terminate_chain", False):
+                logging.debug("Terminating chain ...")
+
+                chain = chains.get(chain_request_id=running_request.chain_request_id)
+
+                # A failure terminate will always fail the chain
+                if validation_status == CoordinatedLakeRequestValidationStatus.FAILURE:
+                    __close_chain(chain=chain, chain_status=LakeChainRequestStatus.FAILED, job_status=JobStatus.FAILED)
+
+                    return
+
+                __close_chain(chain=chain, chain_status=LakeChainRequestStatus.COMPLETED, job_status=JobStatus.COMPLETED)
+
+                return
+
+            elif validation_body.get("execute_chain_step"):
+                logging.debug("Unlocking conditional request ...")
+
+                chains.add_condition_met_request(
+                    chain_request_id=running_request.chain_request_id,
+                    request_name=validation_body["execute_chain_step"]
+                )
+
+            else:
+                logging.debug("Ran a validation request just to run it :shrug: ... nothing to do")
+
+    # Determine if there are any more requests to execute
+    chain_details = chains.get(chain_request_id=running_request.chain_request_id, consistent_read=True)
+
+    if chain_details.chain_execution_status in [LakeRequestStatus.COMPLETED, LakeRequestStatus.FAILED]:
+        logging.debug("Chain has already been completed ... nothing to do")
 
         return
 
-    coordinator = ChainCoordinator.from_chain_request_id(running_request.chain_request_id)
+    coordinator = ChainCoordinator(
+        chain=ObjectBody(body={"requests": chain_details.chain}),
+        chain_request_id=running_request.chain_request_id,
+        conditions_met_requests=chain_details.conditions_met_requests,
+        executed_requests=chain_details.executed_requests,
+    )
 
     # Execute the next group of requests in the chain
     logging.debug("Executing next group of requests in chain")
 
     num_of_executed = coordinator.execute_next(
-        parent_job_id=event_body["job_id"],
-        parent_job_type=event_body["job_type"],
+        parent_job_id=chain_details.job_id,
+        parent_job_type=chain_details.job_type,
     )
 
     if num_of_executed == 0:
-        logging.debug("No more requests to execute ... cleaning up chain")
+        logging.debug("No requests available to execute right now ... nothing to do")
 
-        jobs = JobsClient()
+        all_coordinated_by_chain = coordinated_requests.get_all_by_chain_request_id(chain_request_id=running_request.chain_request_id)
 
-        parent_job = jobs.get(job_id=event_body["job_id"], job_type=event_body["job_type"])
+        logging.debug(f"Found {all_coordinated_by_chain} coordinated requests")
 
-        parent_job.status = JobStatus.COMPLETED
+        # Check if all requests have been executed
+        if all([req.execution_status == 'COMPLETED' or req.execution_status == 'FAILED' for req in all_coordinated_by_chain]):
+            # Close out the chain
+            logging.debug("All requests have finished ... closing out chain")
 
-        parent_job.ended = datetime.now(tz=utc_tz)
+            __close_chain(chain=chain_details, chain_status=LakeChainRequestStatus.COMPLETED, job_status=JobStatus.COMPLETED)
 
-        chain = chains.get(lake_chain_request_id=running_request.chain_request_id)
+            return
 
-        chain.ended = datetime.now(tz=utc_tz)
+        else:
+            # Still pending other requests for the chain to complete
+            logging.debug("Still waiting on other lake requests to complete ... nothing to do")
 
-        chain.status = LakeRequestStatus.COMPLETED
+            return
+    else:
+        logging.debug(f"Executed {num_of_executed} new requests ... exiting")
 
-        chains.put(chain)
-
-        return
-
+        chains.increment_remaining_running_requests(
+            chain_request_id=running_request.chain_request_id,
+            increment_by=num_of_executed
+        )
 
 
 _FN_NAME = 'omnilake.services.request_manager.chain_coordinator.initiate_chain'
 
 
-@fn_event_response(function_name=_FN_NAME, exception_reporter=ExceptionReporter(),
-                   logger=Logger(_FN_NAME))
-
+@fn_event_response(function_name=_FN_NAME, exception_reporter=ExceptionReporter(), logger=Logger(_FN_NAME))
 def handle_initiate_chain(event, context):
     """
     Handles incoming new chain requests
@@ -440,32 +902,43 @@ def handle_initiate_chain(event, context):
         schema=LakeChainRequestEventBodySchema,
     )
 
-    # Initialize the chain by creating a new table object
-    chains_client = LakeRequestChainsClient()
+    logging.debug("Loading job")
 
-    chain_request = LakeRequestChain(
-        chain=event_body["requests"],
-        chain_request_id=event_body["chain_request_id"],
-        job_id=event_body["job_id"],
-        job_type=event_body["job_type"],
-    )
+    jobs = JobsClient()
 
-    chains_client.put(chain_request)
+    job = jobs.get(job_id=event_body["job_id"], job_type=event_body["job_type"])
 
-    logging.debug("Chain request saved")
+    logging.debug("Job loaded")
 
-    # Create a new ChainCoordinator object to handle the chain
-    logging.debug("Initializing new ChainCoordinator object")
+    with jobs.job_execution(job=job, skip_completion=True):
+        logging.debug("Initializing new ChainCoordinator object")
 
-    coordinator = ChainCoordinator(
-        chain=event_body["requests"],
-        chain_request_id=event_body["chain_request_id"],
-    )
+        coordinator = ChainCoordinator.from_chain_request_id(chain_request_id=event_body["chain_request_id"])
 
-    # Execute the next group of requests in the chain
-    logging.debug("Executing next group of requests in chain")
+        logging.debug("Validating chain")
 
-    coordinator.execute_next(
-        parent_job_id=event_body["job_id"],
-        parent_job_type=event_body["job_type"],
-    )
+        coordinator.validate_chain()
+
+        logging.debug("Chain validation complete")
+
+        chains = LakeChainRequestsClient()
+
+        # Set the chain status to executing
+        chain = chains.get(chain_request_id=event_body["chain_request_id"])
+
+        chain.chain_execution_status = LakeChainRequestStatus.EXECUTING
+
+        chains.put(chain)
+
+        # Execute the next group of requests in the chain
+        logging.debug("Executing next group of requests in chain")
+
+        num_executed = coordinator.execute_next(
+            parent_job_id=event_body["job_id"],
+            parent_job_type=event_body["job_type"],
+        )
+
+        chains.increment_remaining_running_requests(
+            chain_request_id=event_body["chain_request_id"],
+            increment_by=num_executed,
+        )

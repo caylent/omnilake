@@ -1,6 +1,8 @@
+import json
+
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Dict, List, Optional, Union, Type
+from typing import Any, List, Optional, Union, Type
 
 from da_vinci.core.client_base import RESTClientBase, RESTClientResponse
 
@@ -187,6 +189,17 @@ class RequestBody:
         return self.attributes
 
 
+class OmniClientJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+
+        elif isinstance(obj, RequestBody):
+            return obj.to_dict()
+
+        return json.JSONEncoder.default(self, obj)
+
+
 class OmniLake(RESTClientBase):
     def __init__(self, app_name: str = 'omnilake', deployment_id: str = 'dev'):
         super().__init__(
@@ -205,9 +218,9 @@ class OmniLake(RESTClientBase):
         if not request.path:
             raise ValueError('Request object does not have a defined path')
 
-        request_body = request.to_dict()
+        request_body = json.dumps(request, cls=OmniClientJSONEncoder)
 
         return self.post(
-            body=request_body,
+            body=json.loads(request_body),
             path=request.path,
         )

@@ -1,6 +1,6 @@
-'''
+"""
 Local event definitions for the recursive summarization processor.
-'''
+"""
 
 from da_vinci.core.immutable_object import (
     ObjectBodySchema,

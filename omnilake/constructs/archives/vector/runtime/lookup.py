@@ -1,6 +1,6 @@
-'''
+"""
 Handles the lookup request for vector archives
-'''
+"""
 import logging
 
 from datetime import datetime, UTC as utc_tz

@@ -216,46 +216,31 @@ class DirectSourceLookup(RequestBody):
         )
 
 
-class RelatedRequestEntriesLookup(RequestBody):
+class RelatedRequestResponseLookup(RequestBody):
     """
     This is a lookup instruction, it describes how the lake should lookup information.
 
     This is a related request lookup, it will pull the response entry from the given related_request_id provided.
     """
     attribute_definitions = [
-        # One of related_request_id or related_request_name is required
         RequestBodyAttribute(
             'related_request_id',
-            optional=True,
-        ),
-
-        # Used for multi-requests only 
-        RequestBodyAttribute(
-            'related_request_name',
-            optional=True,
         ),
 
         RequestBodyAttribute(
             'request_type',
-            immutable_default='RELATED_ENTRIES',
+            immutable_default='RELATED_RESPONSE',
         ),
     ]
 
-    def __init__(self, related_request_id: str, related_request_name: Optional[str] = None):
+    def __init__(self, related_request_id: str):
         """
         Initialize the RelatedRequestEntriesLookup
 
         Keyword Arguments:
         related_request_id -- The related_request_id to lookup
-        related_request_name -- The related_request_name to lookup
         """
-        if related_request_id is None and related_request_name is None:
-            raise ValueError('One of related_request_id or related_request_name is required')
-
-        super().__init__(
-            related_request_id=related_request_id,
-            related_request_name=related_request_name,
-        )
+        super().__init__(related_request_id=related_request_id)
 
 
 class RelatedRequestSourcesLookup(RequestBody):
@@ -278,13 +263,6 @@ class RelatedRequestSourcesLookup(RequestBody):
         # One of related_request_id or related_request_name is required
         RequestBodyAttribute(
             'related_request_id',
-            optional=True,
-        ),
-
-        # Used for multi-requests only 
-        RequestBodyAttribute(
-            'related_request_name',
-            optional=True,
         ),
 
         RequestBodyAttribute(
@@ -390,6 +368,7 @@ class SummarizationProcessor(RequestBody):
     ```
     """
     attribute_definitions = [
+        # Must always have a goal, but it won't be used when the prompt is provided
         RequestBodyAttribute(
             'goal',
             attribute_subtype=RequestAttributeType.STRING,

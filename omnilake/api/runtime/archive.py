@@ -1,6 +1,6 @@
-'''
+"""
 Archive API Declaration
-'''
+"""
 import logging
 
 from da_vinci.core.immutable_object import (

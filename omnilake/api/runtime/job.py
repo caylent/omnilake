@@ -1,6 +1,6 @@
-'''
+"""
 Handles the job API
-'''
+"""
 from da_vinci.core.immutable_object import (
     ObjectBody,
     ObjectBodySchema,
@@ -41,8 +41,7 @@ class JobsAPI(ChildAPI):
         Describe a job
 
         Keyword arguments:
-        job_type -- The job type
-        job_id -- The job ID
+        request_body -- the request body
         """
         job_type = request_body["job_type"]
 

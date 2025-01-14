@@ -15,6 +15,10 @@ from da_vinci_cdk.constructs.service import SimpleRESTService
 
 from omnilake.tables.provisioned_archives.stack import Archive, ProvisionedArchivesTable
 from omnilake.tables.entries.stack import Entry, EntriesTable
+from omnilake.tables.lake_chain_requests.stack import (
+    LakeChainRequest,
+    LakeChainRequestsTable,
+)
 from omnilake.tables.lake_requests.stack import (
     LakeRequest,
     LakeRequestsTable,
@@ -70,6 +74,7 @@ class OmniLakeAPIStack(Stack):
                 EntriesTable,
                 LakeRequestsTable,
                 JobsTable,
+                LakeChainRequestsTable,
                 LakeConstructArchiveBasicStack,
                 LakeConstructArchiveVectorStack,
                 LakeConstructResponderDirectStack,
@@ -115,6 +120,11 @@ class OmniLakeAPIStack(Stack):
                     resource_name=Entry.table_name,
                     resource_type=ResourceType.TABLE,
                     policy_name='read',
+                ),
+                ResourceAccessRequest(
+                    resource_name=LakeChainRequest.table_name,
+                    resource_type=ResourceType.TABLE,
+                    policy_name='read_write',
                 ),
                 ResourceAccessRequest(
                     resource_name=LakeRequest.table_name,

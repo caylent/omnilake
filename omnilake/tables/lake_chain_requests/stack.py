@@ -3,10 +3,10 @@ from constructs import Construct
 from da_vinci_cdk.constructs.dynamodb import DynamoDBTable
 from da_vinci_cdk.stack import Stack
 
-from omnilake.services.request_manager.tables.lake_request_chains.client import LakeRequestChain
+from omnilake.tables.lake_chain_requests.client import LakeChainRequest
 
 
-class LakeRequestChainsTable(Stack):
+class LakeChainRequestsTable(Stack):
     def __init__(self, app_name: str, deployment_id: str,
                  scope: Construct, stack_name: str):
         super().__init__(
@@ -18,5 +18,5 @@ class LakeRequestChainsTable(Stack):
 
         self.table = DynamoDBTable.from_orm_table_object(
             scope=self,
-            table_object=LakeRequestChain,
+            table_object=LakeChainRequest,
         )

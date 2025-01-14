@@ -1,6 +1,6 @@
-'''
+"""
 Summarizes the content into a more concise form.
-'''
+"""
 import logging
 
 from datetime import datetime, UTC as utc_tz
@@ -124,7 +124,6 @@ class SummaryPrompt:
                 setting_key="default_summary_prompt",
             )
 
-        if self.goal:
             prompt += f"\n\nUSER GOAL: {self.goal}\n\n"
 
         resource_contents = "\n\n".join([self.resource_content(entry_id) for entry_id in self.entry_ids])
@@ -162,6 +161,7 @@ def handler(event: Dict, context: Dict):
         entry_ids=event_body.get("entry_ids"),
         goal=event_body.get("goal"),
         include_source_metadata=event_body.get("include_source_metadata"),
+        custom_prompt=event_body.get("prompt"),
     )
 
     jobs = JobsClient()

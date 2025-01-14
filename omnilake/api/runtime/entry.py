@@ -1,6 +1,6 @@
-'''
+"""
 Contains the EntriesAPI class, which is a child API of the OmniLakeAPI class.
-'''
+"""
 from datetime import datetime
 
 from da_vinci.core.immutable_object import (
@@ -25,7 +25,6 @@ from omnilake.internal_lib.naming import OmniLakeResourceName
 from omnilake.tables.entries.client import EntriesClient
 from omnilake.tables.jobs.client import Job, JobsClient
 from omnilake.tables.provisioned_archives.client import ArchivesClient
-
 from omnilake.tables.registered_request_constructs.client import (
     RegisteredRequestConstructsClient,
     RequestConstructType,
@@ -170,8 +169,8 @@ class EntriesAPI(ChildAPI):
         event_publisher = EventPublisher()
 
         event = EventBusEvent(
-            event_type=event_body.get("event_type", strict=True),
             body=event_body.to_dict(ignore_unkown=True),
+            event_type=event_body.get("event_type", strict=True),
         )
 
         event_publisher.submit(event)

@@ -1,6 +1,6 @@
-'''
+"""
 Handle final response
-'''
+"""
 import logging
 
 from typing import Dict

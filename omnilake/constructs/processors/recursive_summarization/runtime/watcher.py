@@ -1,6 +1,6 @@
-'''
+"""
 Watches for summary returns
-'''
+"""
 import logging
 
 from datetime import datetime, UTC as utc_tz

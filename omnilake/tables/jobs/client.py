@@ -233,8 +233,9 @@ class JobsClient(TableClient):
             yield job
 
         except Exception as error:
-            # TODO: Handle failing parent jobs, make it optional
             job.status = JobStatus.FAILED
+
+            job.ended = datetime.now(tz=utc_tz)
 
             job.status_message = failure_status_message or str(error)
 

@@ -3,6 +3,7 @@ Handles the Vector Storage queries
 """
 import json
 import logging
+import math
 
 from typing import List
 
@@ -93,18 +94,16 @@ class VectorStorageSearch:
 
         return [entry for idx, entry in enumerate(entries) if idx not in ids_to_remove]
 
-    def _sort_entries_by_tag(archive_id: str, entries: List[Entry], target_tags: List[str]) -> List[Entry]:
+    def _sort_entries_by_tag(self, archive_id: str, entries: List[Entry], target_tags: List[str]) -> List[Entry]:
         """
         Sort the entries based on the target tags.
 
         Keyword arguments:
-        entries -- The entries to sort.
+        archive_id -- The ID of the archive to sort against.
+        entries -- The entry_ids to sort.
         target_tags -- The target tags to sort against.
         """
         indexed_entries = IndexedEntriesClient()
-
-        # Quick referencable dictionary of all entries by ID
-        all_entries_by_id = {entry.entry_id: entry for entry in entries}
 
         entries_to_sort = []
 
@@ -113,13 +112,13 @@ class VectorStorageSearch:
 
             entry_index = indexed_entries.get(
                 archive_id=archive_id,
-                entry_id=entry.entry_id,
+                entry_id=entry,
             )
 
             logging.debug(f'Entry index details: {entry_index}')
 
-            if not entry:
-                raise ValueError(f'Could not find entry index for {entry.entry_id}')
+            if not entry_index:
+                raise ValueError(f'Could not find entry index for {entry} in archive {archive_id}')
 
             entries_to_sort.append(entry_index)
 
@@ -129,7 +128,7 @@ class VectorStorageSearch:
             reverse=True,
         )
 
-        result = [all_entries_by_id[entry.entry_id] for entry in sorted_entries]
+        result = [entry.entry_id for entry in sorted_entries]
 
         return result
 
@@ -185,7 +184,7 @@ class VectorStorageSearch:
         resulting_entries = self._query(
             db=db,
             query=query,
-            result_limits=max_entries + (max_entries * 0.2), # Set query limit to 20% more than the max entries
+            result_limits=max_entries + math.ceil(max_entries * 0.3), # Set query limit to 30% more than the max entries
             vector_store_id=vector_store_id,
         )
 

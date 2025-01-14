@@ -4,7 +4,7 @@ Handle Initial Lake Request Processing
 import logging
 
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from da_vinci.core.immutable_object import (
     InvalidObjectSchemaError,
@@ -36,10 +36,12 @@ from omnilake.tables.registered_request_constructs.client import (
 )
 
 # Local Imports
+from omnilake.services.request_manager.runtime.stage_complete import CALLBACK_ON_FAILURE_EVENT_TYPE
+
 from omnilake.services.request_manager.runtime.primitive_lookup import (
     DirectEntryLookupSchema,
     DirectSourceLookupSchema,
-    RelatedRequestEntriesLookupSchema,
+    RelatedRequestResponseLookupSchema,
     RelatedRequestSourcesLookupSchema,
 )
 
@@ -56,12 +58,13 @@ class LoadedConstruct:
 
 
 class LakeRequestInit:
-    def __init__(self, originating_event: EventBusEvent):
+    def __init__(self, originating_event: Optional[EventBusEvent] = None):
         """
         Initialize the Lake Request Init service
 
         Keyword Arguments:
-        originating_event -- The event that triggered the request
+        originating_event -- The event that triggered the request, this is optional to be able to use this obejct in 
+                                a standalone manner for request validation for chains
         """
         self.registered_constructs = RegisteredRequestConstructsClient()
 
@@ -72,7 +75,7 @@ class LakeRequestInit:
         self.__lookup_primitive_schemas = {
             "DIRECT_ENTRY": DirectEntryLookupSchema,
             "DIRECT_SOURCE": DirectSourceLookupSchema,
-            "RELATED_ENTRIES": RelatedRequestEntriesLookupSchema,
+            "RELATED_RESPONSE": RelatedRequestResponseLookupSchema,
             "RELATED_SOURCES": RelatedRequestSourcesLookupSchema,
         }
 
@@ -139,7 +142,7 @@ class LakeRequestInit:
         return construct.schema
 
     def _validate_component_schema(self, registered_construct_type: str, registered_construct_name: str,
-                                   component_body: ObjectBody):
+                                   component_body: ObjectBody) -> None:
         """
         Validate the schema of a component of the request
 
@@ -214,7 +217,7 @@ class LakeRequestInit:
             event=self.originating_event.next_event(
                 event_type=construct_details.event_type,
                 body=publish_body.to_dict(),
-                callback_event_type_on_failure="lake_request_failure",
+                callback_event_type_on_failure=CALLBACK_ON_FAILURE_EVENT_TYPE,
             )
         )
 
@@ -278,11 +281,10 @@ class LakeRequestInit:
         )
 
 
-_FN_NAME = 'omnilake.services.request_manager.request_init'
+_FN_NAME = 'omnilake.services.request_manager.lake_request_init'
 
 
-@fn_event_response(function_name=_FN_NAME, exception_reporter=ExceptionReporter(),
-                   logger=Logger(_FN_NAME))
+@fn_event_response(function_name=_FN_NAME, exception_reporter=ExceptionReporter(), logger=Logger(_FN_NAME))
 def handler(event, context):
     """
     Handler for Lake Request initialization
@@ -317,6 +319,7 @@ def handler(event, context):
 
         # Validate the request
         with jobs.job_execution(validation_job, fail_parent=True):
+            # TODO: If this fails, kick off a failure event in case a chain is dependent on this
             lake_request_init.validate(event_body)
 
         lake_request.last_known_stage = LakeRequestStage.LOOKUP

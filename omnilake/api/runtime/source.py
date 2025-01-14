@@ -1,6 +1,6 @@
-'''
+"""
 Handles the source API
-'''
+"""
 import re
 
 from da_vinci.core.immutable_object import (
@@ -175,7 +175,6 @@ class SourcesAPI(ChildAPI):
 
         name = request_body["name"]
 
-        # TODO: Regex validate that the name has no spaces, only alphanumeric and underscores
         if not re.match(r'^\w+$', name):
             return self.respond(
                 body={'message': 'Invalid source type name'},

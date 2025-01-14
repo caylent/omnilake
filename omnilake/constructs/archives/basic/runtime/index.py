@@ -1,4 +1,6 @@
-'''Index an entry into an archive.'''
+"""
+Index an entry into an archive.
+"""
 import logging
 
 from datetime import datetime, UTC as utc_tz

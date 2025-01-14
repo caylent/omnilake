@@ -1,6 +1,6 @@
-'''
+"""
 Processes all requests to vectorize text data and store it in vector storage.
-'''
+"""
 import json
 import logging
 

@@ -4,6 +4,8 @@ from constructs import Construct
 
 from aws_cdk import Duration
 
+from aws_cdk.aws_iam import ManagedPolicy
+
 from da_vinci.core.resource_discovery import ResourceType
 
 from da_vinci_cdk.stack import Stack
@@ -14,6 +16,8 @@ from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
 
 from omnilake.services.ai_statistics_collector.stack import AIStatisticsCollectorStack
 
+from omnilake.services.raw_storage_manager.stack import LakeRawStorageManagerStack
+
 from omnilake.tables.entries.stack import Entry, EntriesTable
 from omnilake.tables.jobs.stack import Job, JobsTable
 from omnilake.tables.lake_requests.stack import LakeRequest, LakeRequestsTable
@@ -23,14 +27,14 @@ from omnilake.tables.registered_request_constructs.stack import (
 )
 from omnilake.tables.sources.stack import Source, SourcesTable
 
-from omnilake.services.request_manager.tables.lake_request_chains.stack import (
-    LakeRequestChain,
-    LakeRequestChainsTable,
+from omnilake.tables.lake_chain_requests.stack import (
+    LakeChainRequest,
+    LakeChainRequestsTable,
 )
 
-from omnilake.services.request_manager.tables.lake_request_chain_running_requests.stack import (
-    LakeRequestChainRunningRequest,
-    LakeRequestChainRunningRequestsTable,
+from omnilake.services.request_manager.tables.lake_chain_coordinated_lake_requests.stack import (
+    LakeChainCoordinatedLakeRequest,
+    LakeChainCoordinatedLakeRequestsTable,
 )
 
 
@@ -58,9 +62,10 @@ class LakeRequestManagerStack(Stack):
                 AIStatisticsCollectorStack,
                 EntriesTable,
                 JobsTable,
-                LakeRequestChainsTable,
-                LakeRequestChainRunningRequestsTable,
+                LakeChainRequestsTable,
+                LakeChainCoordinatedLakeRequestsTable,
                 LakeRequestsTable,
+                LakeRawStorageManagerStack,
                 RegisteredRequestConstructsTable,
                 SourcesTable,
             ],
@@ -208,11 +213,41 @@ class LakeRequestManagerStack(Stack):
             timeout=Duration.minutes(2),
         )
 
+        self.catch_failures = EventBusSubscriptionFunction(
+            base_image=self.app_base_image,
+            construct_id='omnilake-lake-request-handle-failures',
+            event_type='omnilake_request_internal_failure',
+            description='Catch all lake request failures',
+            entry=self.runtime_path,
+            index='failure.py',
+            handler='handler',
+            function_name=resource_namer('lake-request-failure', scope=self),
+            memory_size=256,
+            resource_access_requests=[
+                ResourceAccessRequest(
+                    resource_name='event_bus',
+                    resource_type=ResourceType.ASYNC_SERVICE,
+                ),
+                ResourceAccessRequest(
+                    resource_type=ResourceType.TABLE,
+                    resource_name=Job.table_name,
+                    policy_name='read_write'
+                ),
+                ResourceAccessRequest(
+                    resource_type=ResourceType.TABLE,
+                    resource_name=LakeRequest.table_name,
+                    policy_name='read_write',
+                ),
+            ],
+            scope=self,
+            timeout=Duration.minutes(1),
+        )
+
         ## Chain Management
         self.chain_init = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
             construct_id='omnilake-lake-request-chain-init',
-            event_type='omnilake_chain_lake_request',
+            event_type='omnilake_chain_request',
             description='Initiate a chain',
             entry=self.runtime_path,
             index='chain_coordinator.py',
@@ -225,19 +260,33 @@ class LakeRequestManagerStack(Stack):
                     resource_type=ResourceType.ASYNC_SERVICE,
                 ),
                 ResourceAccessRequest(
+                    resource_name='raw_storage_manager',
+                    resource_type=ResourceType.REST_SERVICE,
+                ),
+                ResourceAccessRequest(
+                    resource_type=ResourceType.TABLE,
+                    resource_name=Job.table_name,
+                    policy_name='read_write'
+                ),
+                ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
                     resource_name=LakeRequest.table_name,
                     policy_name='read_write',
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
-                    resource_name=LakeRequestChain.table_name,
+                    resource_name=LakeChainRequest.table_name,
                     policy_name='read_write',
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
-                    resource_name=LakeRequestChainRunningRequest.table_name,
+                    resource_name=LakeChainCoordinatedLakeRequest.table_name,
                     policy_name='read_write',
+                ),
+                ResourceAccessRequest(
+                    resource_type=ResourceType.TABLE,
+                    resource_name=RegisteredRequestConstruct.table_name,
+                    policy_name='read',
                 ),
             ],
             scope=self,
@@ -253,11 +302,31 @@ class LakeRequestManagerStack(Stack):
             index='chain_coordinator.py',
             handler='handle_lake_response',
             function_name=resource_namer('lake-request-chain-mgr', scope=self),
-            memory_size=256,
+            memory_size=512,
+            managed_policies=[
+                ManagedPolicy.from_managed_policy_arn(
+                    scope=self,
+                    id='lake-response-amazon-bedrock-full-access',
+                    managed_policy_arn='arn:aws:iam::aws:policy/AmazonBedrockFullAccess'
+                ),
+            ],
             resource_access_requests=[
                 ResourceAccessRequest(
                     resource_name='event_bus',
                     resource_type=ResourceType.ASYNC_SERVICE,
+                ),
+                ResourceAccessRequest(
+                    resource_name='raw_storage_manager',
+                    resource_type=ResourceType.REST_SERVICE,
+                ),
+                ResourceAccessRequest(
+                    resource_name='ai_statistics_collector',
+                    resource_type=ResourceType.REST_SERVICE,
+                ),
+                ResourceAccessRequest(
+                    resource_type=ResourceType.TABLE,
+                    resource_name=Job.table_name,
+                    policy_name='read_write'
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
@@ -266,15 +335,15 @@ class LakeRequestManagerStack(Stack):
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
-                    resource_name=LakeRequestChain.table_name,
+                    resource_name=LakeChainRequest.table_name,
                     policy_name='read_write',
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
-                    resource_name=LakeRequestChainRunningRequest.table_name,
+                    resource_name=LakeChainCoordinatedLakeRequest.table_name,
                     policy_name='read_write',
                 ),
             ],
             scope=self,
-            timeout=Duration.minutes(2),
+            timeout=Duration.minutes(4),
         )

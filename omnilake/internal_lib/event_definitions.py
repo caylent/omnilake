@@ -203,8 +203,34 @@ class IndexEntryEventBodySchema(ObjectBodySchema):
     ]
 
 
+class LakeCompletionEventBodySchema(ObjectBodySchema):
+    attributes = [
+        SchemaAttribute(
+            name='event_type',
+            type=SchemaAttributeType.STRING,
+            default_value='omnilake_lake_request_completion',
+            required=False,
+        ),
+
+        SchemaAttribute(
+            name='lake_request_id',
+            type=SchemaAttributeType.STRING,
+        ),
+
+        SchemaAttribute(
+            name='response_status',
+            type=SchemaAttributeType.STRING,
+        ),
+    ]
+
+
 class LakeChainRequestEventBodySchema(ObjectBodySchema):
     attributes = [
+        SchemaAttribute(
+            name='chain',
+            type=SchemaAttributeType.OBJECT_LIST,
+        ),
+
         SchemaAttribute(
             name='chain_request_id',
             type=SchemaAttributeType.STRING,
@@ -224,32 +250,11 @@ class LakeChainRequestEventBodySchema(ObjectBodySchema):
         ),
 
         SchemaAttribute(
-            name='requests',
-            type=SchemaAttributeType.OBJECT_LIST,
-        ),
-
-        SchemaAttribute(
             name='event_type',
             type=SchemaAttributeType.STRING,
-            default_value='omnilake_lake_chain_request',
+            default_value='omnilake_chain_request',
             required=False,
         )
-    ]
-
-
-class LakeCompletionEventBodySchema(ObjectBodySchema):
-    attributes = [
-        SchemaAttribute(
-            name='event_type',
-            type=SchemaAttributeType.STRING,
-            default_value='omnilake_lake_request_completion',
-            required=False,
-        ),
-
-        SchemaAttribute(
-            name='lake_request_id',
-            type=SchemaAttributeType.STRING,
-        ),
     ]
 
 

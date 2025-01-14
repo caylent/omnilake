@@ -10,11 +10,11 @@ readme = "README.md"
 python = "^3.12" # Newer versions of Python don't have PyArrow wheel yet
 lancedb = "^0.12.0"
 boto3 = "^1.35.10"
-da-vinci = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci", tag = "2024.12.5" }
+da-vinci = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci" }
 
 [tool.poetry.group.dev.dependencies]
 pypdf = "^5.1.0"
-da-vinci-cdk = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci-cdk", tag = "2024.12.5" }
+da-vinci-cdk = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci-cdk" }
 
 [build-system]
 requires = ["poetry-core"]

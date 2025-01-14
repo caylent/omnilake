@@ -1,6 +1,6 @@
-'''
+"""
 Handles the processing of new entries and adds them to the storage.
-'''
+"""
 import logging
 
 from datetime import datetime, UTC as utc_tz

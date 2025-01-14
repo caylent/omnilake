@@ -38,9 +38,9 @@ class RefreshIndexCommand(Command):
 
     @classmethod
     def configure_parser(cls, parser):
-        question_parser = parser.add_parser('index', help='Indexes the source code')
+        index_parser = parser.add_parser('index', help='Indexes the source code')
 
-        return question_parser
+        return index_parser
 
     def create_archive(self, archive_name: str):
         """

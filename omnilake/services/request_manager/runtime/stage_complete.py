@@ -1,3 +1,6 @@
+"""
+Handles the completion of a stage in the Lake Request lifecycle
+"""
 import logging
 
 from datetime import datetime, UTC as utc_tz
@@ -12,6 +15,7 @@ from da_vinci.event_bus.event import Event as EventBusEvent
 from da_vinci.exception_trap.client import ExceptionReporter
 
 from omnilake.internal_lib.event_definitions import (
+    LakeCompletionEventBodySchema,
     LakeRequestInternalRequestEventBodySchema,
     LakeRequestInternalResponseEventBodySchema,
 )
@@ -27,6 +31,8 @@ from omnilake.tables.registered_request_constructs.client import (
     RegisteredRequestConstructsClient,
     RequestConstructType,
 )
+
+CALLBACK_ON_FAILURE_EVENT_TYPE = "omnilake_request_internal_failure"
 
 
 def _get_construct(operation_name: str, registered_construct_type: str, registered_construct_name: str) -> Dict:
@@ -54,7 +60,8 @@ def _get_construct(operation_name: str, registered_construct_type: str, register
     }
 
 
-def _close_out(entry_ids: List[str], lake_request: LakeRequest, lake_requests_client: LakeRequestsClient):
+def _close_out(lake_request: LakeRequest, lake_requests_client: LakeRequestsClient, entry_ids: List[str] = None,
+               response_status: LakeRequestStatus = LakeRequestStatus.COMPLETED, status_message: str = None):
     """
     Close out the request and update the status.
 
@@ -62,14 +69,18 @@ def _close_out(entry_ids: List[str], lake_request: LakeRequest, lake_requests_cl
     entry_ids -- The entry IDs
     lake_request -- The lake request
     lake_request_client -- The lake request client
+    response_status -- The response status
+    status_message -- The status message
     """
     logging.info(f"Request just finished final stage, marking as completed")
 
-    lake_request.request_status = LakeRequestStatus.COMPLETED
+    lake_request.request_status = response_status
 
     lake_request.response_completed_on = datetime.now(tz=utc_tz)
 
-    lake_request.response_entry_id = entry_ids[0]
+    # If the request was completed, we should have the final entry ID
+    if response_status == LakeRequestStatus.COMPLETED:
+        lake_request.response_entry_id = entry_ids[0]
 
     lake_requests_client.put(lake_request)
 
@@ -77,14 +88,32 @@ def _close_out(entry_ids: List[str], lake_request: LakeRequest, lake_requests_cl
 
     job = jobs_client.get(job_id=lake_request.job_id, job_type=lake_request.job_type)
 
-    job.status = LakeRequestStatus.COMPLETED
+    job.status = response_status
 
     job.ended = datetime.now(tz=utc_tz)
 
+    if status_message:
+        job.status_message = status_message
+
     jobs_client.put(job)
 
+    event_publisher = EventPublisher()
 
-_FN_NAME = 'omnilake.services.request_manager.stage_complete'
+    lake_request_finished_event = ObjectBody(
+        body={
+            "lake_request_id": lake_request.lake_request_id,
+            "response_status": response_status,
+        },
+        schema=LakeCompletionEventBodySchema,
+    )
+
+    event_publisher.submit(event=EventBusEvent(
+        body=lake_request_finished_event,
+        event_type=lake_request_finished_event.get("event_type"),
+    ))
+
+
+_FN_NAME = 'omnilake.services.request_manager.lake_request_stage_complete'
 
 
 def _send_next(entry_ids: List[str], lake_request_id: str, original_event: EventBusEvent, next_stage_body: ObjectBody,
@@ -114,7 +143,7 @@ def _send_next(entry_ids: List[str], lake_request_id: str, original_event: Event
             },
             schema=LakeRequestInternalRequestEventBodySchema,
         ),
-        callback_event_type="lake_request_failure",
+        callback_event_type=CALLBACK_ON_FAILURE_EVENT_TYPE,
         event_type=next_stage_event_name,
     )
 
@@ -154,9 +183,7 @@ def handler(event, context):
     if job.status == JobStatus.FAILED:
         logging.error(f"Parent job {lake_request.job_id} failed, marking request as failed")
 
-        lake_request.request_status = LakeRequestStatus.FAILED
-
-        lake_requests.put(lake_request)
+        _close_out(lake_request=lake_request, lake_requests_client=lake_requests, response_status=LakeRequestStatus.FAILED)
 
         return
 
@@ -168,11 +195,7 @@ def handler(event, context):
 
     # Update the request with the entry IDs
     if ai_invocation_ids:
-        if not lake_request.ai_invocation_ids:
-            lake_request.ai_invocation_ids = ai_invocation_ids
-
-        else:
-            lake_request.ai_invocation_ids.extend(ai_invocation_ids)
+        lake_requests.add_ai_invocation_ids(ai_invocation_ids=ai_invocation_ids, lake_request_id=lake_request.lake_request_id)
 
     # Kick off next Stage
     if last_known_stage == LakeRequestStage.LOOKUP:
@@ -182,6 +205,18 @@ def handler(event, context):
         lake_request.last_known_stage = LakeRequestStage.PROCESSING
 
         raw_object_body = lake_request.processing_instructions
+
+        if len(entry_ids) < 1:
+            logging.debug(f"No entries found for request {lake_request.lake_request_id} ... failing request")
+
+            _close_out(
+                lake_request=lake_request,
+                lake_requests_client=lake_requests,
+                response_status=LakeRequestStatus.FAILED,
+                status_message="No entries found",
+            )
+
+            return
 
         construct_definition = _get_construct(
                 operation_name='process',
@@ -201,6 +236,30 @@ def handler(event, context):
         lake_request.last_known_stage = LakeRequestStage.RESPONDING
 
         raw_object_body = lake_request.response_config
+
+        if len(entry_ids) < 1:
+            logging.debug(f"No entries found for request {lake_request.lake_request_id} ... failing request")
+
+            _close_out(
+                lake_request=lake_request,
+                lake_requests_client=lake_requests,
+                response_status=LakeRequestStatus.FAILED,
+                status_message="No entries returned from processor",
+            )
+
+            return
+        
+        elif len(entry_ids) > 1:
+            logging.debug(f"Too many entries found for request {lake_request.lake_request_id} ... failing request")
+
+            _close_out(
+                lake_request=lake_request,
+                lake_requests_client=lake_requests,
+                response_status=LakeRequestStatus.FAILED,
+                status_message="Too many entries returned from processor",
+            )
+
+            return
 
         construct_definition = _get_construct(
             operation_name='respond',

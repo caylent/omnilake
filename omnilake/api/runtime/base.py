@@ -1,8 +1,8 @@
-'''
+"""
 Mini API Constructor Library
 
 Makes it easy to create this monster API while making the code a bit more maintainable.
-'''
+"""
 import logging
 import traceback
 

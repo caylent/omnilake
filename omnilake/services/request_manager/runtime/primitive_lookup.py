@@ -1,3 +1,6 @@
+"""
+Built-in primitive lookup functions
+"""
 import logging
 
 from typing import List
@@ -22,7 +25,7 @@ from omnilake.internal_lib.event_definitions import (
 
 from omnilake.tables.entries.client import EntriesClient
 from omnilake.tables.jobs.client import JobsClient
-from omnilake.tables.lake_requests.client import LakeRequestsClient
+from omnilake.tables.lake_requests.client import LakeRequest, LakeRequestsClient
 from omnilake.tables.sources.client import SourcesClient
 
 
@@ -66,7 +69,7 @@ class DirectSourceLookupSchema(ObjectBodySchema):
     ]
 
 
-class RelatedRequestEntriesLookupSchema(ObjectBodySchema):
+class RelatedRequestResponseLookupSchema(ObjectBodySchema):
     attributes=[
         SchemaAttribute(
             name='related_request_id',
@@ -78,7 +81,7 @@ class RelatedRequestEntriesLookupSchema(ObjectBodySchema):
             name='request_type',
             type=SchemaAttributeType.STRING,
             required=False,
-            default_value='RELATED_ENTRY',
+            default_value='RELATED_RESPONSE',
         ),
     ]
 
@@ -124,8 +127,6 @@ def expand_source(source_id: str, source_type: str) -> str:
     source_id -- The source ID
     source_type -- The source type
     '''
-    expanded_resources = []
-
     sources = SourcesClient()
 
     source = sources.get(source_type=source_type, source_id=source_id)
@@ -139,7 +140,7 @@ def expand_source(source_id: str, source_type: str) -> str:
     return source.latest_content_entry_id
 
 
-def get_related_request(related_request_id: str) -> str:
+def get_related_request(related_request_id: str) -> LakeRequest:
     '''
     Gets the related request
 
@@ -148,7 +149,7 @@ def get_related_request(related_request_id: str) -> str:
     '''
     lake_requests = LakeRequestsClient()
 
-    related_request = lake_requests.get(request_id=related_request_id)
+    related_request = lake_requests.get(lake_request_id=related_request_id)
 
     return related_request
 
@@ -156,8 +157,7 @@ def get_related_request(related_request_id: str) -> str:
 _FN_NAME = 'omnilake.services.request_manager.primitive_lookup'
 
 
-@fn_event_response(function_name=_FN_NAME, exception_reporter=ExceptionReporter(),
-                   logger=Logger(_FN_NAME))
+@fn_event_response(function_name=_FN_NAME, exception_reporter=ExceptionReporter(), logger=Logger(_FN_NAME))
 def handler(event, context):
     """
     Handles a primitive lookup request
@@ -204,10 +204,10 @@ def handler(event, context):
 
             _validate_entries(entry_ids=[entry_id])
 
-        elif request_type == 'RELATED_ENTRY':
+        elif request_type == 'RELATED_RESPONSE':
             request_id = event_body.get('request_id')
 
-            logging.debug(f'Performing related entries lookup for request ID {request_id}')
+            logging.debug(f'Performing related response lookup for request ID {request_id}')
 
             related_request_id = request_body['related_request_id']
 

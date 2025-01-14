@@ -1,3 +1,5 @@
+import logging
+
 from typing import Dict, List, Optional, Union
 
 from omnilake.client.client import (
@@ -13,7 +15,7 @@ from omnilake.client.construct_request_definitions import (
     DirectEntryLookup,
     DirectResponseConfig,
     DirectSourceLookup,
-    RelatedRequestEntriesLookup,
+    RelatedRequestResponseLookup,
     RelatedRequestSourcesLookup,
     SimpleResponseConfig,
     SummarizationProcessor,
@@ -515,6 +517,47 @@ class DescribeSourceType(RequestBody):
         )
 
 
+class DescribeChainRequest(RequestBody):
+    """
+    Describe a chain request in the lake
+
+    Keyword Arguments:
+    request_id -- the id of the request
+
+    Example:
+    ```
+    DescribeChainRequest(
+        request_id='test_request'
+    )
+    ```
+    """
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'chain_request_id',
+        )
+    ]
+
+    path = '/describe_chain_request'
+
+    def __init__(self, chain_request_id: str):
+        """
+        Initialize the DescribeChainRequest request
+
+        Keyword Arguments:
+        chain_request_id -- the id of the request
+
+        Example:
+        ```
+        DescribeChainRequest(
+            chain_request_id='test_request'
+        )
+        ```
+        """
+        super().__init__(
+            chain_request_id=chain_request_id,
+        )
+
+
 class DescribeLakeRequest(RequestBody):
     """
     Describe a lake request in the lake
@@ -676,7 +719,7 @@ class LakeRequest(RequestBody):
         RequestBodyAttribute(
             'lookup_instructions',
             attribute_type=RequestAttributeType.OBJECT_LIST,
-            supported_request_body_types=[BasicLookup, DirectEntryLookup, DirectSourceLookup, RelatedRequestEntriesLookup, RelatedRequestSourcesLookup, VectorLookup],
+            supported_request_body_types=[BasicLookup, DirectEntryLookup, DirectSourceLookup, RelatedRequestResponseLookup, RelatedRequestSourcesLookup, VectorLookup],
         ),
 
         # Name is used as a reference for chained requests
@@ -689,18 +732,17 @@ class LakeRequest(RequestBody):
         RequestBodyAttribute(
             'processing_instructions',
             attribute_type=RequestAttributeType.OBJECT,
-            supported_request_body_types=SummarizationProcessor,
+            supported_request_body_types=[SummarizationProcessor],
         ),
 
         RequestBodyAttribute(
             'response_config',
             attribute_type=RequestAttributeType.OBJECT,
-            default={},
-            optional=True,
-        )
+            supported_request_body_types=[DirectResponseConfig, SimpleResponseConfig],
+        ),
     ]
 
-    def __init__(self, lookup_instructions: List[Union[Dict, BasicLookup, DirectEntryLookup, DirectSourceLookup, RelatedRequestEntriesLookup, RelatedRequestSourcesLookup, VectorLookup]],
+    def __init__(self, lookup_instructions: List[Union[Dict, BasicLookup, DirectEntryLookup, DirectSourceLookup, RelatedRequestResponseLookup, RelatedRequestSourcesLookup, VectorLookup]],
                     processing_instructions: Union[Dict, SummarizationProcessor],
                     response_config: Optional[Union[Dict, DirectResponseConfig, SimpleResponseConfig]] = None):
             """
@@ -752,6 +794,140 @@ class LakeRequest(RequestBody):
                 lookup_instructions=flt_lookup_instructions,
                 processing_instructions=flt_processing_instructions,
                 response_config=flt_response_config,
+            )
+
+
+class LakeChainValidationCondition(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'execute_chain_step',
+            attribute_type=RequestAttributeType.STRING,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'terminate_chain',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            default=False,
+            optional=True,
+        ),
+    ]
+
+    def __init__(self, execute_chain_step: Optional[str] = None, terminate_chain: Optional[bool] = None):
+        """
+        Initialize the LakeChainValidationBody Object
+
+        Keyword Arguments:
+        execute_chain_step -- the name of the chain step to execute when condition is met
+        terminate_chain -- whether to terminate the chain
+        """
+        if not execute_chain_step and terminate_chain is None:
+            raise ValueError('Either execute_chain_step or terminate_chain must be provided')
+
+        super().__init__(
+            execute_chain_step=execute_chain_step,
+            terminate_chain=terminate_chain,
+        )
+
+
+class LakeChainValidation(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'model_id',
+            attribute_type=RequestAttributeType.STRING,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'on_failure',
+            attribute_type=RequestAttributeType.OBJECT,
+            supported_request_body_types=[LakeChainValidationCondition],
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'on_success',
+            attribute_type=RequestAttributeType.OBJECT,
+            supported_request_body_types=[LakeChainValidationCondition],
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'prompt',
+            attribute_type=RequestAttributeType.STRING,
+        ),
+    ]
+
+    def __init__(self, model_id: Optional[str] = None, on_failure: Optional[Union[Dict, LakeChainValidationCondition]] = None,
+                 on_success: Optional[Union[Dict, LakeChainValidationCondition]] = None, prompt: str = None):
+            """
+            Initialize the LakeRequestValidation Object
+    
+            Keyword Arguments:
+            model_id -- the id of the model to use for validation
+            on_failure -- the condition to execute on failure
+            on_success -- the condition to execute on success
+            prompt -- the prompt for the validation
+            """
+            if not on_failure and not on_success:
+                logging.warning(' neither on_failure or on_success were provided, the validation results will have no effect')
+    
+            super().__init__(
+                model_id=model_id,
+                on_failure=on_failure,
+                on_success=on_success,
+                prompt=prompt,
+            )
+
+
+class LakeChainStep(RequestBody):
+    """
+    A step in a lake chain
+    """
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'conditional',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            optional=True,
+            default=False,
+        ),
+
+        RequestBodyAttribute(
+            'lake_request',
+            attribute_type=RequestAttributeType.OBJECT,
+            supported_request_body_types=[LakeRequest],
+        ),
+
+        RequestBodyAttribute(
+            'name',
+            attribute_type=RequestAttributeType.STRING,
+        ),
+
+        RequestBodyAttribute(
+            'validation',
+            attribute_type=RequestAttributeType.OBJECT,
+            supported_request_body_types=[LakeChainValidation],
+            optional=True,
+        ),
+    ]
+
+    def __init__(self, lake_request: Union[Dict, LakeRequest], name: str, conditional: Optional[bool] = False,
+                 validation: Optional[Union[Dict, LakeChainValidation]] = None):
+            """
+            Initialize the LakeChainStep Object
+    
+            Keyword Arguments:
+            conditional -- whether the step is conditional
+            lake_request -- the lake request for the step
+            name -- the name of the step
+            validation -- the validation for the step
+            """
+
+            super().__init__(
+                conditional=conditional,
+                lake_request=lake_request,
+                name=name,
+                validation=validation,
             )
 
 
@@ -850,10 +1026,39 @@ class ListProvisionedArchives(RequestBody):
     path = '/list_archives'
 
 
+class SubmitChainRequest(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'chain',
+            attribute_type=RequestAttributeType.OBJECT_LIST,
+            supported_request_body_types=[LakeRequest],
+        )   
+    ]
+
+    path = '/submit_chain_request'
+
+    def __init__(self, chain: List[Union[Dict, LakeRequest]]):
+        """
+        Initialize the SubmitLakeRequestChain request
+
+        Keyword Arguments:
+        chain -- the chain of lake requests to submit
+        """
+        flt_requests = []
+
+        for request in chain:
+            if isinstance(request, RequestBody):
+                request = request.to_dict()
+
+            flt_requests.append(request)
+
+        super().__init__(chain=flt_requests)
+
+
 class SubmitLakeRequest(LakeRequest):
     path = '/submit_lake_request'
 
-    def __init__(self, lookup_instructions: List[Union[Dict, BasicLookup, DirectEntryLookup, DirectSourceLookup, RelatedRequestEntriesLookup, RelatedRequestSourcesLookup, VectorLookup]],
+    def __init__(self, lookup_instructions: List[Union[Dict, BasicLookup, DirectEntryLookup, DirectSourceLookup, RelatedRequestResponseLookup, RelatedRequestSourcesLookup, VectorLookup]],
                     processing_instructions: Union[Dict, SummarizationProcessor],
                     response_config: Optional[Union[Dict, SimpleResponseConfig]] = None):
         """
@@ -887,57 +1092,4 @@ class SubmitLakeRequest(LakeRequest):
             lookup_instructions=lookup_instructions,
             processing_instructions=processing_instructions,
             response_config=response_config,
-        )
-
-
-class SubmitLakeRequestChain(RequestBody):
-    attribute_definitions = [
-        RequestBodyAttribute(
-            'requests',
-            attribute_type=RequestAttributeType.OBJECT_LIST,
-            supported_request_body_types=[LakeRequest],
-        )   
-    ]
-
-    path = '/submit_lake_request_chain'
-
-    def __init__(self, requests: List[Union[Dict, LakeRequest]]):
-        """
-        Initialize the SubmitLakeRequestChain request
-
-        Keyword Arguments:
-        requests -- the requests to submit
-
-        Example:
-        ```
-        SubmitLakeRequestChain(
-            requests=[
-                LakeRequest(
-                    lookup_instructions=[
-                        BasicLookup(
-                            archive_id='test_archive',
-                            max_entries=20,
-                        ),
-                    ],
-                    processing_instructions=SummarizationProcessor(
-                        include_source_metadata=True,
-                    ),
-                    response_config=SimpleResponseConfig(
-                        destination_archive_id='test_destination_archive'
-                        goal='What was the result of ...'
-                    )
-                )
-            ]
-        )
-        """
-        flt_requests = []
-
-        for request in requests:
-            if isinstance(request, RequestBody):
-                request = request.to_dict()
-
-            flt_requests.append(request)
-
-        super().__init__(
-            requests=flt_requests,
         )
