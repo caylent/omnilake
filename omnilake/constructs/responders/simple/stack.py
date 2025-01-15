@@ -17,7 +17,7 @@ from da_vinci_cdk.constructs.base import resource_namer
 from da_vinci_cdk.constructs.global_setting import GlobalSetting, GlobalSettingType
 from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
 
-from da_vinci_cdk.framework_stacks.event_bus.stack import EventBusStack
+from da_vinci_cdk.framework_stacks.services.event_bus.stack import EventBusStack
 
 from omnilake.tables.provisioned_archives.stack import Archive, ProvisionedArchivesTable
 from omnilake.tables.entries.stack import Entry, EntriesTable

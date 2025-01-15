@@ -16,7 +16,7 @@ from da_vinci_cdk.constructs.access_management import ResourceAccessRequest
 from da_vinci_cdk.constructs.base import resource_namer
 from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
 
-from da_vinci_cdk.framework_stacks.event_bus.stack import EventBusStack
+from da_vinci_cdk.framework_stacks.services.event_bus.stack import EventBusStack
 
 from omnilake.tables.provisioned_archives.stack import Archive, ProvisionedArchivesTable
 from omnilake.tables.entries.stack import Entry, EntriesTable
