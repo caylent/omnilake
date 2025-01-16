@@ -103,9 +103,10 @@ omnilake = OmniLake()
 # Create a new archive
 archive_req = CreateArchive(
     archive_id='my_archive',
+    configuration=BasicArchiveConfiguration(),
     description='My first OmniLake archive'
 )
-omnilake.create_archive(archive_req)
+omnilake.request(archive_req)
 
 source_type = CreateSourceType(
     name='webpage',
