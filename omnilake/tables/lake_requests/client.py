@@ -262,6 +262,34 @@ class LakeRequestsClient(TableClient):
     
         return updated_remaining_lookups
 
+    def decrement_remaining_lookups(self, lake_request_id: str) -> int:
+        """
+        Decrement the remaining lookups for the lake request
+
+        Keyword arguments:
+        lake_request_id -- The request ID of the compaction job context
+        """
+        update_expression = "SET RemainingLookups = if_not_exists(RemainingLookups, :start) - :decrement"
+
+        expression_attribute_values = {
+            ':decrement': {'N': "1"},
+            ':start': {'N': "0"},
+        }
+
+        response = self.client.update_item(
+            TableName=self.table_endpoint_name,
+            Key={
+                'LakeRequestId': {'S': lake_request_id},
+            },
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expression_attribute_values,
+            ReturnValues='UPDATED_NEW',
+        )
+
+        updated_remaining_lookups = int(response['Attributes']['RemainingLookups']['N'])
+
+        return updated_remaining_lookups
+
     def delete(self, lake_request: LakeRequest) -> None:
         """
         Delete an lake request object from the table

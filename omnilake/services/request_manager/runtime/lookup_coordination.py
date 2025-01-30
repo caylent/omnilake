@@ -40,7 +40,15 @@ def handler(event, context):
 
     lake_request_id = event_body.get('lake_request_id')
 
-    remaining_lookups = lake_requests.add_lookup_results(lake_request_id=lake_request_id, results=event_body.get('entry_ids'))
+    resulting_entry_ids = event_body.get('entry_ids')
+
+    if len(resulting_entry_ids) == 0:
+        logging.debug(f'No entry ids were returned from lookup for {lake_request_id}')
+
+        remaining_lookups = lake_requests.decrement_remaining_lookups(lake_request_id=lake_request_id)
+
+    else:
+        remaining_lookups = lake_requests.add_lookup_results(lake_request_id=lake_request_id, results=resulting_entry_ids)
 
     if remaining_lookups != 0:
         logging.debug(f'Not all lookups have completed for request {lake_request_id}')
@@ -53,9 +61,14 @@ def handler(event, context):
 
     publisher = EventPublisher()
 
+    all_responses = lake_request.response_sources
+
+    if all_responses is None:
+        all_responses = set()
+
     response_body = ObjectBody(
         body={
-            "entry_ids": list(lake_request.response_sources),
+            "entry_ids": list(all_responses),
             "lake_request_id": lake_request_id,
         },
         schema=LakeRequestInternalResponseEventBodySchema,

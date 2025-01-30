@@ -250,13 +250,13 @@ def handler(event, context):
             return
         
         elif len(entry_ids) > 1:
-            logging.debug(f"Too many entries found for request {lake_request.lake_request_id} ... failing request")
+            logging.debug(f"Too many entries returned by processor {lake_request.lake_request_id} ... failing request")
 
             _close_out(
                 lake_request=lake_request,
                 lake_requests_client=lake_requests,
                 response_status=LakeRequestStatus.FAILED,
-                status_message="Too many entries returned from processor",
+                status_message=f"Too many entries returned by processor, expected 1, got {len(entry_ids)}",
             )
 
             return
