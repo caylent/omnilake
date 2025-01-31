@@ -52,6 +52,7 @@ class VectorStorageSearch:
         Keyword arguments:
         entries -- The entries to remove duplicates from.
         """
+        # Track all of the original source entries
         existing_source_entries = {}
 
         ids_to_remove = set()
@@ -59,13 +60,16 @@ class VectorStorageSearch:
         entries_client = EntriesClient()
 
         for idx, entry in enumerate(entries):
+            # Fetch Entry Table Object
             entry_global_obj  = entries_client.get(entry_id=entry)
 
             original_of_source = entry_global_obj.original_of_source
 
+            # If Entry is not original content of a source, skip
             if not original_of_source:
                 continue
 
+            # If the original source is not in the existing source entries, add it
             if original_of_source not in existing_source_entries:
                 existing_source_entries[original_of_source] = {
                     'list_id': idx,
@@ -85,7 +89,9 @@ class VectorStorageSearch:
 
                 ids_to_remove.add(existing_entry_idx)
 
-                existing_source_entries[original_of_source] = idx
+                existing_source_entries[original_of_source]['list_id'] = idx
+
+                existing_source_entries[original_of_source]['effective_date'] = entry_global_obj.effective_on
 
             else:
                 logging.debug(f'Removing duplicate source entry {entry} in favor of {existing_entry}.')
