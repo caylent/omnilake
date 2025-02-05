@@ -247,10 +247,11 @@ class EntriesAPI(ChildAPI):
         event_body = ObjectBody(
             body={
                 "archive_id": destination_archive_id,
+                "effective_on": entry.effective_on,
                 "entry_id": entry_id,
-                "entry_details": entry.to_dict(json_compatible=True),
                 "job_id": job.job_id,
                 "job_type": job.job_type,
+                "original_of_source": entry.original_of_source,
             },
             schema=IndexEntryEventBodySchema,
         )

@@ -98,13 +98,13 @@ class LakeConstructProcessorRecursiveSummarizationStack(Stack):
 
         self.start_processor = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
-            construct_id='omnilake-summarization-processor-start',
+            construct_id='omnilake-processor-summarization-start',
             event_type=self.registered_request_construct_obj.get_operation_event_name('process'),
             description='Starts processing a summarization request.',
             entry=self.runtime_path,
             index='start.py',
             handler='handler',
-            function_name=resource_namer('processor-recursive-summary-processor-start', scope=self),
+            function_name=resource_namer('processor-recursive-summary-start', scope=self),
             memory_size=256,
             resource_access_requests=[
                 ResourceAccessRequest(
@@ -128,13 +128,13 @@ class LakeConstructProcessorRecursiveSummarizationStack(Stack):
 
         self.summarization_processor = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
-            construct_id='omnilake-summarization-processor-process',
+            construct_id='omnilake-processor-summarization-process',
             event_type='omnilake_processor_summarizer_summary_request',
             description='Processes summarization requests.',
             entry=self.runtime_path,
             index='summarizer.py',
             handler='handler',
-            function_name=resource_namer('processor-recursive-summary-processor', scope=self),
+            function_name=resource_namer('processor-recursive-summary-summarizer', scope=self),
             memory_size=512,
             managed_policies=[
                 ManagedPolicy.from_managed_policy_arn(
@@ -159,7 +159,7 @@ class LakeConstructProcessorRecursiveSummarizationStack(Stack):
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,
                     resource_name=Entry.table_name,
-                    policy_name='read_write'
+                    policy_name='read'
                 ),
                 ResourceAccessRequest(
                     resource_type=ResourceType.TABLE,

@@ -346,6 +346,125 @@ class VectorLookup(RequestBody):
 
 
 ## LakeRequestProcessingInstructions
+class KnowledgeGraphProcessor(RequestBody):
+    """
+    This is a Knowledge Graph processor, it extracts information from the provided entries and uses
+    a modeled graph to generate a response.
+
+    Keyword Arguments:
+
+    Example:
+    ```
+    
+    ```
+    """
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'ai_filter_include_goal',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            default=False,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'ai_filter_model_id',
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'community_filtering_max_group_size',
+            attribute_type=RequestAttributeType.INTEGER,
+            optional=True,
+            default=150,
+        ),
+
+        RequestBodyAttribute(
+            'community_filtering_threshold_min',
+            attribute_type=RequestAttributeType.INTEGER,
+            optional=True,
+            default=50,
+        ),
+
+        RequestBodyAttribute(
+            'goal',
+            attribute_subtype=RequestAttributeType.STRING,
+        ),
+
+        RequestBodyAttribute(
+            'knowledge_extraction_include_goal',
+            attribute_type=RequestAttributeType.BOOLEAN,
+            default=False,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'knowledge_extraction_model_id',
+            optional=True,
+        ),
+
+        # This is the minimum weight of a connection in the graph for it to be 
+        # considered for the AI filtering and response generation
+        RequestBodyAttribute(
+            'minimally_considered_weight',
+            attribute_type=RequestAttributeType.INTEGER,
+            default=1,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'processor_type',
+            immutable_default='KNOWLEDGE_GRAPH',
+        ),
+
+        RequestBodyAttribute(
+            'response_model_id',
+            optional=True,
+        ),
+
+        # This is the % of communities that will be sent through AI filtering prior 
+        # to response generation. This is always in descending order of community strength
+        RequestBodyAttribute(
+            'top_n_communities',
+            attribute_type=RequestAttributeType.INTEGER,
+            optional=True,
+            default=80,
+        ),
+    ]
+
+    def __init__(self, goal: str, ai_filter_include_goal: Optional[bool] = False, ai_filter_model_id: Optional[str] = None,
+                 community_filtering_max_group_size: Optional[int] = None, community_filtering_threshold_min: Optional[int] = None,
+                 knowledge_extraction_include_goal: Optional[bool] = False, knowledge_extraction_model_id: Optional[str] = None,
+                 minimally_considered_weight: Optional[int] = None, response_model_id: Optional[str] = None,
+                 top_n_communities: Optional[int] = None):
+            """
+            Initialize the KnowledgeGraphProcessor
+    
+            Keyword Arguments:
+            goal -- The goal of the request
+            ai_filter_include_goal -- Whether or not to include the goal in the AI filtering
+            ai_filter_model_id -- The model_id to use for AI filtering
+            community_filtering_max_group_size -- The maximum group size for community filtering
+            community_filtering_threshold_min -- The minimum threshold for community filtering
+            knowledge_extraction_include_goal -- Whether or not to include the goal in the knowledge extraction
+            knowledge_extraction_model_id -- The model_id to use for knowledge extraction
+            minimally_considered_weight -- The minimum weight of a connection in the graph for it to be considered for AI filtering and response generation
+            response_model_id -- The model_id to use for response generation
+            top_n_communities -- The % of communities that will be sent through AI filtering prior to response generation
+            """
+            super().__init__(
+                goal=goal,
+                ai_filter_include_goal=ai_filter_include_goal,
+                ai_filter_model_id=ai_filter_model_id,
+                community_filtering_max_group_size=community_filtering_max_group_size,
+                community_filtering_threshold_min=community_filtering_threshold_min,
+                knowledge_extraction_include_goal=knowledge_extraction_include_goal,
+                knowledge_extraction_model_id=knowledge_extraction_model_id,
+                minimally_considered_weight=minimally_considered_weight,
+                response_model_id=response_model_id,
+                top_n_communities=top_n_communities,
+            )
+
+
 class SummarizationProcessor(RequestBody):
     """
     This is a processing instruction, it describes how the lake should process the request.
@@ -353,7 +472,6 @@ class SummarizationProcessor(RequestBody):
     This is a summarization processor, it will summarize the information in the archive recursively.
 
     Keyword Arguments:
-    - algorithm: The algorithm to use for summarization
     - include_source_metadata: Whether or not to include the source metadata in the response
     - model_id: The model_id to use for summarization
     - prompt: The prompt to use for summarization

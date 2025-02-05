@@ -41,6 +41,10 @@ from omnilake.constructs.archives.vector.stack import (
     LakeConstructArchiveVectorStack,
 )
 
+from omnilake.constructs.processors.knowledge_graph.stack import (
+    LakeConstructProcessorKnowledgeGraphStack,
+)
+
 from omnilake.constructs.processors.recursive_summarization.stack import (
     LakeConstructProcessorRecursiveSummarizationStack,
 )
@@ -79,6 +83,7 @@ class OmniLakeAPIStack(Stack):
                 LakeConstructArchiveVectorStack,
                 LakeConstructResponderDirectStack,
                 LakeConstructResponderSimpleStack,
+                LakeConstructProcessorKnowledgeGraphStack,
                 LakeConstructProcessorRecursiveSummarizationStack,
                 LakeIngestionServiceStack,
                 LakeRequestManagerStack,

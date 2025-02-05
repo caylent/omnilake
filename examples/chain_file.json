@@ -1,0 +1,114 @@
+[
+    {
+        "conditional": false,
+        "lake_request": {
+            "lookup_instructions": [
+                {
+                    "archive_id": "omnilake",
+                    "max_entries": 1,
+                    "query_string": "what is OmniLake",
+                    "prioritize_tags": ["readme"],
+                    "request_type": "VECTOR"
+                }
+            ],
+            "processing_instructions": {
+                "goal": "answer the question, what is OmniLake. be as detailed as possible",
+                "processor_type": "SUMMARIZATION"
+            },
+            "response_config": {
+                "response_type": "DIRECT"
+            }
+        },
+        "name": "omnilake_description"
+    },
+    {
+        "conditional": false,
+        "lake_request": {
+            "lookup_instructions": [
+                {
+                    "related_request_id": "REF:omnilake_description.response_id",
+                    "request_type": "RELATED_RESPONSE"
+                }
+            ],
+            "processing_instructions": {
+                "goal": "describe how OmniLake can be used to enable enterprises across all industries",
+                "processor_type": "SUMMARIZATION"
+            },
+            "response_config": {
+                "goal": "provide an executive summary of how OmniLake can be used to enable enterprises across all industries",
+                "response_type": "SIMPLE"
+            }
+        },
+        "name": "omnilake_enterprise",
+        "validation": {
+            "model_id": null,
+            "on_failure": null,
+            "on_success": {
+                "execute_chain_step": "conditional_run",
+                "terminate_chain": false
+            },
+            "prompt": "does the response provide a summary of how OmniLake can be used to enable enterprises"
+        }
+    },
+    {
+        "conditional": true,
+        "lake_request": {
+            "lookup_instructions": [
+                {
+                    "related_request_id": "REF:omnilake_description.response_id",
+                    "request_type": "RELATED_RESPONSE"
+                }
+            ],
+            "processing_instructions": {
+                "goal": "if omnilake was an actual lake, what would the creatures that inhabit it, known as omnis, look like",
+                "processor_type": "SUMMARIZATION"
+            },
+            "response_config": {
+                "response_type": "DIRECT"
+            }
+        },
+        "name": "conditional_run",
+        "validation": null
+    },
+    {
+        "conditional": false,
+        "lake_request": {
+            "lookup_instructions": [
+                {
+                    "related_request_id": "REF:conditional_run.response_id",
+                    "request_type": "RELATED_RESPONSE"
+                }
+            ],
+            "processing_instructions": {
+                "goal": "Return a prompt that instructs the model to explain how an Omni would live in the provided solution. It should include information about what an Omni is and instruct the model to be creative.\n\nDO NOT include your mention of the request, simply provide the response.",
+                "processor_type": "SUMMARIZATION"
+            },
+            "response_config": {
+                "response_type": "DIRECT"
+            }
+        },
+        "name": "omni_prompt",
+        "validation": null
+    },
+    {
+        "conditional": false,
+        "lake_request": {
+            "lookup_instructions": [
+                {
+                    "related_request_id": "REF:omnilake_enterprise.response_id",
+                    "request_type": "RELATED_RESPONSE"
+                }
+            ],
+            "processing_instructions": {
+                "goal": "UNUSED",
+                "processor_type": "SUMMARIZATION",
+                "prompt": "REF:omni_prompt.response_body"
+            },
+            "response_config": {
+                "destination_archive_id": null,
+                "response_type": "DIRECT"
+            }
+        },
+        "name": "omni_in_omnilake"
+    }
+]

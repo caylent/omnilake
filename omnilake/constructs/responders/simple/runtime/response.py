@@ -25,8 +25,9 @@ from omnilake.internal_lib.event_definitions import (
 )
 
 from omnilake.internal_lib.clients import AIStatisticSchema, AIStatisticsCollector
+from omnilake.internal_lib.naming import EntryResourceName
 
-from omnilake.tables.entries.client import Entry, EntriesClient
+from omnilake.tables.entries.client import EntriesClient
 from omnilake.tables.jobs.client import JobsClient
 from omnilake.tables.provisioned_archives.client import ArchivesClient
 from omnilake.tables.registered_request_constructs.client import (
@@ -181,6 +182,18 @@ def final_responder(event: Dict, context: Dict) -> None:
 
         logging.debug(f'Response result: {final_response}')
 
+        raw_storage = RawStorageManager()
+
+        resp = raw_storage.create_entry(
+            content=final_response.response,
+            effective_on=datetime.now(tz=utc_tz).isoformat(),
+            sources=[str(EntryResourceName(entry_id))]
+        )
+
+        entry_id = resp.response_body["entry_id"]
+
+        logging.debug(f'Raw storage response: {resp}')
+
         stats_collector = AIStatisticsCollector()
 
         invocation_id = str(uuid4())
@@ -191,6 +204,7 @@ def final_responder(event: Dict, context: Dict) -> None:
                 "job_type": parent_job.job_type,
                 "job_id": parent_job.job_id,
                 "model_id": final_response.statistics.model_id,
+                "resulting_entry_id": entry_id,
                 "total_output_tokens": final_response.statistics.output_tokens,
                 "total_input_tokens": final_response.statistics.input_tokens,
             },
@@ -201,29 +215,12 @@ def final_responder(event: Dict, context: Dict) -> None:
 
         logging.debug(f'AI Response: {final_response.response}')
 
-        entries = EntriesClient()
-
-        entry = Entry(
-            char_count=len(final_response.response),
-            content_hash=Entry.calculate_hash(final_response.response),
-            effective_on=datetime.now(tz=utc_tz),
-            sources=set([entry_id]),
-        )
-
-        entries.put(entry)
-
-        raw_storage = RawStorageManager()
-
-        resp = raw_storage.save_entry(entry_id=entry.entry_id, content=final_response.response)
-
-        logging.debug(f'Raw storage response: {resp}')
-
         event_publisher = EventPublisher()
 
         publish = ObjectBody(
             body={
                 "lake_request_id": event_body.get("lake_request_id"),
-                "entry_ids": [entry.entry_id],
+                "entry_ids": [entry_id],
                 "ai_invocation_ids": [invocation_id],
             },
             schema=LakeRequestInternalResponseEventBodySchema,
@@ -245,15 +242,14 @@ def final_responder(event: Dict, context: Dict) -> None:
         index_body = ObjectBody(
             body={
                 "archive_id": destination_archive_id,
-                "entry_id": entry.entry_id,
-                "entry_details": entry.to_dict(json_compatible=True),
+                "entry_id": entry_id,
                 "parent_job_id": parent_job.job_id,
                 "parent_job_type": parent_job.job_type,
             },
             schema=IndexEntryEventBodySchema,
         )
 
-        logging.debug(f"Indexing entry {entry.entry_id} for archive {destination_archive_id}: {index_body.to_dict()}")
+        logging.debug(f"Indexing entry {entry_id} for archive {destination_archive_id}: {index_body.to_dict()}")
 
         event_type = _get_index_endpoint(archive_id=destination_archive_id)  
 

@@ -5,7 +5,8 @@ Omnitizer Commands
 - Question: Takes a question about the project and returns the answer
 '''
 
+from omnilake.client.commands.chain import ChainCommand
 from omnilake.client.commands.index import RefreshIndexCommand
 from omnilake.client.commands.question import QuestionCommand
 
-__all__ = {k.command_name: k for k in [RefreshIndexCommand, QuestionCommand]}
+__all__ = {k.command_name: k for k in [ChainCommand, RefreshIndexCommand, QuestionCommand]}

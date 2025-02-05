@@ -1,10 +1,7 @@
-import json
-
-from datetime import datetime, timedelta, UTC as utc_tz
+from datetime import datetime, UTC as utc_tz
 from typing import Dict, Optional, Set, Union
 from uuid import uuid4
 
-from da_vinci.core.json import DaVinciObjectEncoder
 from da_vinci.core.orm import (
     TableClient,
     TableObject,
@@ -25,13 +22,6 @@ class SummaryJob(TableObject):
         attribute_type=TableObjectAttributeType.STRING,
         description="The summary request id",
         default=lambda: str(uuid4()),
-    )
-
-    ttl_attribute = TableObjectAttribute(
-        name="time_to_live",
-        attribute_type=TableObjectAttributeType.DATETIME,
-        description="The time to live for the summarization job context.",
-        default=lambda: datetime.now(tz=utc_tz) + timedelta(days=30),
     )
 
     attributes = [

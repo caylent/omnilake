@@ -95,9 +95,7 @@ def handler(event: Dict, context: Dict):
 
     retain_latest_originals_only = archive.configuration.get('retain_latest_originals_only')
 
-    entry_details = event_body.get("entry_details")
-
-    original_of_source = entry_details.get("original_of_source")
+    original_of_source = event_body.get("original_of_source")
 
     entry_id = event_body.get("entry_id")
 
@@ -138,7 +136,7 @@ def handler(event: Dict, context: Dict):
 
     entry_obj = indexed_entries.get(archive_id=archive_id, entry_id=entry_id)
 
-    effective_on = entry_details.get("effective_on")
+    effective_on = event_body.get("effective_on")
 
     if not entry_obj:
         entry_obj = IndexedEntry(

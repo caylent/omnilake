@@ -55,6 +55,8 @@ class RefreshIndexCommand(Command):
 
             self.omnilake.request(archive)
 
+            print('Provisioning archive...')
+
             time.sleep(30)
         except Exception as e:
             if "Archive already exists" in str(e):
@@ -146,6 +148,11 @@ class RefreshIndexCommand(Command):
             relative_to_base = str(collected_file.relative_to(starting_dir))
 
             file_contents = collected_file.read_bytes()
+
+            if len(file_contents) == 0:
+                print(f'Skipped {relative_to_base} ... empty file')
+
+                continue
 
             if collected_file.name.endswith('.pdf'):
                 print('Detected PDF file, extracting text...')

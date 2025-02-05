@@ -76,7 +76,7 @@ class LakeRawStorageManagerStack(Stack):
                 ResourceAccessRequest(
                     resource_name=Entry.table_name,
                     resource_type=ResourceType.TABLE,
-                    policy_name='read',
+                    policy_name='read_write',
                 ),
             ],
             scope=self,

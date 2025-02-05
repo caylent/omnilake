@@ -38,11 +38,4 @@ class RecursiveSummaryProcessor(ObjectBodySchema):
             type=SchemaAttributeType.STRING,
             required=False,
         ),
-
-        SchemaAttribute(
-            name='response_type',
-            type=SchemaAttributeType.STRING,
-            default_value='SIMPLE',
-            required=False,
-        ),
     ]

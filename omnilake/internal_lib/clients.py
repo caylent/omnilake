@@ -3,7 +3,8 @@ Definitions of internal clients
 '''
 import logging
 
-from typing import Dict, Optional, Union
+from datetime import datetime
+from typing import Dict, List, Optional, Set, Union
 
 from da_vinci.core.client_base import RESTClientBase
 
@@ -94,6 +95,29 @@ class RawStorageManager(RESTClientBase):
             app_name=app_name,
             deployment_id=deployment_id,
             resource_name='raw_storage_manager'
+        )
+
+    def create_entry(self, content: str, sources: Union[List[str], Set[str]], effective_on: Union[datetime, str] = None):
+        '''
+        Creates an entry from scratch, manages the entries table and the raw entry bucket
+
+        Keyword arguments:
+        content -- The content of the entry
+        effective_on -- The effective date of the entry
+        sources -- The sources of the entry
+        '''
+        effective_on_str = effective_on
+
+        if isinstance(effective_on, datetime):
+            effective_on_str = effective_on.isoformat()
+
+        return self.post(
+            path='/create_entry',
+            body={
+                'content': content,
+                'sources': list(sources),
+                'effective_on': effective_on_str,
+            }
         )
 
     def delete_entry(self, entry_id: str):

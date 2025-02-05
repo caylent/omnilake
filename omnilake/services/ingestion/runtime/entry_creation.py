@@ -297,8 +297,9 @@ def handler(event: Dict, context: Dict):
         index_body = ObjectBody(
             body={
                 "archive_id": destination_archive_id,
+                "effective_on": entry.effective_on,
                 "entry_id": entry.entry_id,
-                "entry_details": entry.to_dict(json_compatible=True),
+                "original_of_source": entry.original_of_source,
                 "parent_job_id": job.job_id,
                 "parent_job_type": job.job_type,
             },

@@ -24,7 +24,7 @@ from omnilake.internal_lib.clients import (
 )
 from omnilake.internal_lib.naming import OmniLakeResourceName, EntryResourceName
 
-from omnilake.tables.entries.client import Entry, EntriesClient
+from omnilake.tables.entries.client import EntriesClient
 from omnilake.tables.jobs.client import JobsClient
 from omnilake.tables.sources.client import SourcesClient
 
@@ -187,18 +187,19 @@ def handler(event: Dict, context: Dict):
 
         logging.debug(f'AI Response: {summarization_result.response}')
 
-        entries = EntriesClient()
-
         sources = [str(EntryResourceName(e_id)) for e_id in event_body.get("entry_ids")]
 
-        entry = Entry(
-            char_count=len(summarization_result.response),
-            content_hash=Entry.calculate_hash(summarization_result.response),
-            effective_on=datetime.now(tz=utc_tz),
-            sources=set(sources),
+        raw_storage = RawStorageManager()
+
+        resp = raw_storage.create_entry(
+            content=summarization_result.response,
+            effective_on=datetime.now(tz=utc_tz).isoformat(),
+            sources=sources
         )
 
-        entries.put(entry)
+        entry_id = resp.response_body["entry_id"]
+
+        logging.debug(f'Raw storage response: {resp}')
 
         stats_collector = AIStatisticsCollector()
 
@@ -210,7 +211,7 @@ def handler(event: Dict, context: Dict):
                 "job_id": parent_job.job_id,
                 "invocation_id": invocation_id,
                 "model_id": summarization_result.statistics.model_id,
-                "resulting_entry_id": entry.entry_id,
+                "resulting_entry_id": entry_id,
                 "total_output_tokens": summarization_result.statistics.output_tokens,
                 "total_input_tokens": summarization_result.statistics.input_tokens,
             },
@@ -219,18 +220,12 @@ def handler(event: Dict, context: Dict):
 
         stats_collector.publish(statistic=ai_statistic)
 
-        raw_storage = RawStorageManager()
-
-        resp = raw_storage.save_entry(entry_id=entry.entry_id, content=summarization_result.response)
-
-        logging.debug(f'Raw storage response: {resp}')
-
         event_bus = EventPublisher()
 
         completed_body = ObjectBody(
             body={
                 "ai_invocation_id": invocation_id,
-                "entry_id": entry.entry_id,
+                "entry_id": entry_id,
                 "summary_request_id": event_body["summary_request_id"],
             },
             schema=SummarizationCompletedSchema,

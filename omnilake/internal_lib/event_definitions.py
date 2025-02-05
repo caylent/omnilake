@@ -181,14 +181,21 @@ class IndexEntryEventBodySchema(ObjectBodySchema):
         ),
 
         SchemaAttribute(
+            name='effective_on',
+            type=SchemaAttributeType.DATETIME,
+            required=False,
+        ),
+
+        SchemaAttribute(
             name='entry_id',
             type=SchemaAttributeType.STRING,
             required=True,
         ),
 
         SchemaAttribute(
-            name='entry_details',
-            type=SchemaAttributeType.OBJECT,
+            name='original_of_source',
+            type=SchemaAttributeType.STRING,
+            required=False,
         ),
 
         SchemaAttribute(

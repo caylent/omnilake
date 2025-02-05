@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from datetime import datetime, UTC as utc_tz
+from datetime import datetime, timedelta, UTC as utc_tz
 from enum import StrEnum
 from uuid import uuid4
 from typing import Dict, Generator, Optional
@@ -36,6 +36,14 @@ class Job(TableObject):
         attribute_type=TableObjectAttributeType.STRING,
         description='The unique identifier of the job',
         default=lambda: str(uuid4())
+    )
+
+    ttl_attribute = TableObjectAttribute(
+        name='time_to_live',
+        attribute_type=TableObjectAttributeType.DATETIME,
+        description='The time to live of the job',
+        optional=True,
+        default=lambda: datetime.now(tz=utc_tz) + timedelta(days=2)
     )
 
     attributes = [

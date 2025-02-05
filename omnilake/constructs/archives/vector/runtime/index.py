@@ -205,9 +205,7 @@ def handler(event: Dict, context: Dict):
 
     entry_id = event_body.get("entry_id")
 
-    entry_details = event_body.get("entry_details")
-
-    original_of_source = entry_details.get("original_of_source")
+    original_of_source = event_body.get("original_of_source")
 
     entries = IndexedEntriesClient()
 
@@ -269,6 +267,9 @@ def handler(event: Dict, context: Dict):
     vector_stores = VectorStoresClient()
 
     vector_store_obj = vector_stores.get(archive_id)
+
+    if not vector_store_obj:
+        raise Exception(f"Vector store not found for archive {archive_id}")
 
     vector_store_id = vector_store_obj.vector_store_id
 
