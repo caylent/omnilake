@@ -8,9 +8,11 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12" # Newer versions of Python don't have PyArrow wheel yet
+aiohttp = "^3.9.3"
 lancedb = "^0.12.0"
 boto3 = "^1.35.10"
 da-vinci = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci" }
+markdownify = "^0.11.6"
 networkx = "^3.4.2"
 python-louvain = "^0.16"
 

@@ -120,6 +120,31 @@ class RawStorageManager(RESTClientBase):
             }
         )
 
+    def create_entry_with_source(self, content: str, source_type: str, source_arguments: Dict, effective_on: Union[datetime, str] = None):
+        '''
+        Creates an entry from scratch, manages the entries table and the raw entry bucket
+
+        Keyword arguments:
+        content -- The content of the entry
+        effective_on -- The effective date of the entry
+        source_type -- The type of the source
+        source_arguments -- The arguments for the source
+        '''
+        effective_on_str = effective_on
+
+        if isinstance(effective_on, datetime):
+            effective_on_str = effective_on.isoformat()
+
+        return self.post(
+            path='/create_entry_with_source',
+            body={
+                'content': content,
+                'source_type': source_type,
+                'source_arguments': source_arguments,
+                'effective_on': effective_on_str,
+            }
+        )
+
     def delete_entry(self, entry_id: str):
         '''
         Deletes an entry
@@ -130,6 +155,15 @@ class RawStorageManager(RESTClientBase):
         entry_id -- The entry ID
         '''
         return self.post(path='/delete_entry', body={'entry_id': entry_id})
+
+    def describe_entry(self, entry_id: str):
+        '''
+        Describes an entry
+
+        Keyword arguments:
+        entry_id -- The entry ID
+        '''
+        return self.post(path='/describe_entry', body={'entry_id': entry_id})
 
     def get_entry(self, entry_id: str):
         '''

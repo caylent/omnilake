@@ -40,6 +40,9 @@ from omnilake.constructs.archives.basic.stack import LakeConstructArchiveBasicSt
 from omnilake.constructs.archives.vector.stack import (
     LakeConstructArchiveVectorStack,
 )
+from omnilake.constructs.archives.web_site.stack import (
+    LakeConstructArchiveWebSiteStack,
+)
 
 from omnilake.constructs.processors.knowledge_graph.stack import (
     LakeConstructProcessorKnowledgeGraphStack,
@@ -82,6 +85,7 @@ class OmniLakeAPIStack(Stack):
                 LakeChainRequestsTable,
                 LakeConstructArchiveBasicStack,
                 LakeConstructArchiveVectorStack,
+                LakeConstructArchiveWebSiteStack,
                 LakeConstructResponderDirectStack,
                 LakeConstructResponderSimpleStack,
                 LakeConstructProcessorKnowledgeGraphStack,

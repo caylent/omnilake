@@ -17,6 +17,8 @@ from da_vinci_cdk.constructs.global_setting import GlobalSetting
 from da_vinci_cdk.constructs.service import SimpleRESTService
 
 from omnilake.tables.entries.stack import Entry, EntriesTable
+from omnilake.tables.sources.stack import Source, SourcesTable
+from omnilake.tables.source_types.stack import SourceType, SourceTypesTable
 
 
 class LakeRawStorageManagerStack(Stack):
@@ -41,6 +43,8 @@ class LakeRawStorageManagerStack(Stack):
             requires_exceptions_trap=True,
             required_stacks=[
                 EntriesTable,
+                SourcesTable,
+                SourceTypesTable,
             ],
             deployment_id=deployment_id,
             scope=scope,
@@ -77,6 +81,16 @@ class LakeRawStorageManagerStack(Stack):
                     resource_name=Entry.table_name,
                     resource_type=ResourceType.TABLE,
                     policy_name='read_write',
+                ),
+                ResourceAccessRequest(
+                    resource_name=Source.table_name,
+                    resource_type=ResourceType.TABLE,
+                    policy_name='read_write',
+                ),
+                ResourceAccessRequest(
+                    resource_name=SourceType.table_name,
+                    resource_type=ResourceType.TABLE,
+                    policy_name='read',
                 ),
             ],
             scope=self,

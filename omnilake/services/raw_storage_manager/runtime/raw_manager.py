@@ -6,7 +6,7 @@ import logging
 import boto3
 
 from datetime import datetime
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from botocore.exceptions import ClientError
 
@@ -16,7 +16,11 @@ from da_vinci.core.rest_service_base import SimpleRESTServiceBase, Route
 
 from da_vinci.exception_trap.client import fn_exception_reporter, ExceptionReporter
 
+from omnilake.internal_lib.naming import SourceResourceName
+
 from omnilake.tables.entries.client import Entry, EntriesClient
+from omnilake.tables.sources.client import Source, SourcesClient
+from omnilake.tables.source_types.client import SourceTypesClient
 
 
 _FN_NAME = "omnilake.service.raw_storage_manager"
@@ -39,6 +43,11 @@ class RawManager(SimpleRESTServiceBase):
                     handler=self.create_entry,
                     method='POST',
                     path='/create_entry'
+                ),
+                Route(
+                    handler=self.create_entry_with_source,
+                    method='POST',
+                    path='/create_entry_with_source',
                 ),
                 Route(
                     handler=self.delete_entry,
@@ -78,6 +87,58 @@ class RawManager(SimpleRESTServiceBase):
 
             else:
                 raise
+
+    def create_entry_with_source(self, content: str, source_arguments: Dict[str, Any], source_type: str,
+                                 effective_on: str = None):
+        """
+        Creates an entry with a source
+
+        Keyword arguments:
+        content -- The content of the entry
+        source_arguments -- The source arguments
+        source_type -- The source type name
+        effective_on -- The effective date of the entry
+        """
+        source_types = SourceTypesClient()
+
+        source_type_obj = source_types.get(source_type_name=source_type)
+
+        if not source_type_obj:
+            return self.respond(
+                body={'message': 'Source type not found'},
+                status_code=404,
+            )
+
+        sources = SourcesClient()
+
+        try:
+            attribute_key = source_type_obj.generate_key(source_arguments=source_arguments)
+
+        except ValueError as e:
+            return self.respond(
+                body=str(e),
+                status_code=400,
+            )
+
+        existing_source = sources.get_by_attribute_key(attribute_key=attribute_key)
+
+        if existing_source:
+            source_rn = SourceResourceName(
+                resource_id=existing_source.source_type + '/' + existing_source.source_id
+            )
+
+        else:
+            source = Source(
+                source_type=source_type,
+                attribute_key=attribute_key,
+                source_arguments=source_arguments
+            )
+
+            sources.put(source)
+
+            source_rn = SourceResourceName(resource_id=source.source_type + '/' + source.source_id)
+
+        return self.create_entry(content=content, sources=[str(source_rn)], effective_on=effective_on)
 
     def create_entry(self, content: str, sources: List[str], effective_on: str = None):
         """

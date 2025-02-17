@@ -95,6 +95,38 @@ class VectorArchiveConfiguration(RequestBody):
         )
 
 
+class WebSiteArchiveConfiguration(RequestBody):
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_type',
+            immutable_default='WEB_SITE',
+        ),
+
+        RequestBodyAttribute(
+            'base_url',
+            attribute_type=RequestAttributeType.STRING,
+        ),
+
+        RequestBodyAttribute(
+            'test_path',
+            attribute_type=RequestAttributeType.STRING,
+        ),
+    ]
+
+    def __init__(self, base_url: str, test_path: str):
+        """
+        Initialize the WebSiteArchiveConfiguration
+
+        Keyword Arguments:
+        base_url -- The base url of the web site
+        test_path -- The test path of the web site
+        """
+        super().__init__(
+            base_url=base_url,
+            test_path=test_path,
+        )
+
+
 ## LakeRequestLookups
 class BasicLookup(RequestBody):
     """
@@ -342,6 +374,41 @@ class VectorLookup(RequestBody):
             max_entries=max_entries,
             query_string=query_string,
             prioritize_tags=prioritize_tags,
+        )
+
+
+class WebSiteLookup(RequestBody):
+    """
+    Retrieves requested pages from a configured web site archive.
+    """
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'archive_id',
+            attribute_type=RequestAttributeType.STRING,
+        ),
+
+        RequestBodyAttribute(
+            'retrieve_paths',
+            attribute_type=RequestAttributeType.LIST,
+        ),
+
+        RequestBodyAttribute(
+            'request_type',
+            immutable_default='WEB_SITE',
+        )
+    ]
+
+    def __init__(self, archive_id: str, retrieve_paths: List[str]):
+        """
+        Initialize the WebSiteLookup
+
+        Keyword Arguments:
+        archive_id -- The archive_id to lookup
+        retrieve_paths -- The paths to retrieve from the web site
+        """
+        super().__init__(
+            archive_id=archive_id,
+            retrieve_paths=retrieve_paths,
         )
 
 

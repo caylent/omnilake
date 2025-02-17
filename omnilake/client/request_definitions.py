@@ -199,14 +199,13 @@ class CreateArchive(RequestBody):
 
         RequestBodyAttribute(
             'description',
-            optional=True,
         ),
     ]
 
     path = '/create_archive'
 
     def __init__(self, archive_id: str, configuration: Union[Dict, BasicArchiveConfiguration, VectorArchiveConfiguration],
-                 description: Optional[str] = None):
+                 description: str):
         """
         Initialize the CreateArchive request
 
