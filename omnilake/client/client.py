@@ -1,4 +1,5 @@
 import json
+import os
 
 from datetime import datetime
 from enum import StrEnum
@@ -201,7 +202,8 @@ class OmniClientJSONEncoder(json.JSONEncoder):
 
 
 class OmniLake(RESTClientBase):
-    def __init__(self, app_name: str = 'omnilake', deployment_id: str = 'dev'):
+    def __init__(self, app_name: str = os.getenv('OMNILAKE_APP_NAME', 'omnilake'),
+                 deployment_id: str = os.getenv('OMNILAKE_DEPLOYMENT_ID', 'dev')):
         super().__init__(
             resource_name='omnilake-private-api',
             app_name=app_name,

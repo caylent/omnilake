@@ -71,7 +71,7 @@ class SSMSecretManager:
         """
         id_only = secret_id.split(":")[1]
 
-        param_path = f"{self.prefix}{id_only}"
+        param_path = f"{self.prefix}/{id_only}"
         
         try:
             response = self.ssm_client.get_parameter(
