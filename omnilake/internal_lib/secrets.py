@@ -1,5 +1,7 @@
-import boto3
+import logging
 import uuid
+
+import boto3
 
 from botocore.exceptions import ClientError
 
@@ -25,7 +27,9 @@ class SSMSecretManager:
 
         deployment_id = env_vars['deployment_id']
 
-        self.prefix = f"{app_name}/{deployment_id}/omnilake_secrets/"
+        self.prefix = f"/{app_name}/{deployment_id}/omnilake_secrets"
+
+        logging.debug(f"SSM Secret Manager initialized with prefix: {self.prefix}")
 
     def mask_secret(self, secret_value: str) -> str:
         """
@@ -50,7 +54,7 @@ class SSMSecretManager:
             Overwrite=False
         )
 
-        return secret_id
+        return f"SECRET:{secret_id}"
 
     def unmask_secret(self, secret_id: str) -> str:
         """
@@ -65,7 +69,9 @@ class SSMSecretManager:
         Raises:
             ValueError: If the secret doesn't exist
         """
-        param_path = f"{self.prefix}{secret_id}"
+        id_only = secret_id.split(":")[1]
+
+        param_path = f"{self.prefix}{id_only}"
         
         try:
             response = self.ssm_client.get_parameter(

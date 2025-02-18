@@ -129,7 +129,7 @@ class ArchiveAPI(ChildAPI):
                     secret_mgr = SSMSecretManager()
 
                     # Initialize the object body, validating the configuration
-                    ObjectBody(
+                    config = ObjectBody(
                         body=configuration,
                         schema=provisioning_schema,
                         secret_masking_fn=secret_mgr.mask_secret,
@@ -144,7 +144,7 @@ class ArchiveAPI(ChildAPI):
         archive_obj = Archive(
             archive_type=archive_type,
             archive_id=archive_id,
-            configuration=configuration.to_dict(),
+            configuration=config.to_dict(),
             description=description,
             status=ArchiveStatus.CREATING,
         )
@@ -161,7 +161,7 @@ class ArchiveAPI(ChildAPI):
             body=ObjectBody(
                 body={
                     "archive_id": archive_id,
-                    "configuration": configuration,
+                    "configuration": config.to_dict(),
                     "description": description,
                     "job_id": job.job_id,
                     "job_type": job.job_type

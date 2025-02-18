@@ -50,8 +50,6 @@ class ChildAPI:
 
         route_value = self._route_map[path]
 
-        logging.debug(f"Executing path {path} with kwargs {kwargs}")
-
         if route_value.request_body_schema:
             logging.info(f"Request body expected for route {path}")
 
@@ -59,6 +57,8 @@ class ChildAPI:
 
             obj_body = ObjectBody(body=kwargs, schema=route_value.request_body_schema,
                                   secret_masking_fn=secret_mgr.mask_secret)
+
+            logging.debug(f"Request body: {obj_body.to_dict()}")
 
             return getattr(self, route_value.method_name)(obj_body)
 

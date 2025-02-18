@@ -1,0 +1,28 @@
+[
+    {
+        "conditional": false,
+        "lake_request": {
+            "lookup_instructions": [
+                {
+                    "archive_id": "caylent_website",
+                    "retrieve_paths": [
+                        "/about",
+                        "/case-study/pipes-ai",
+                        "/case-study/venminder-generative-ai",
+                        "/case-study/iden-x"
+                    ],
+                    "request_type": "WEB_SITE"
+                }
+            ],
+            "processing_instructions": {
+                "goal": "Summarize who Caylent is and how they are helping their clients in the AI/ML Space. Cite specific examples from the case studies, including the names of the clients.",
+                "knowledge_extraction_include_goal": true,
+                "processor_type": "KNOWLEDGE_GRAPH"
+            },
+            "response_config": {
+                "response_type": "DIRECT"
+            }
+        },
+        "name": "caylent_genai_summary"
+    }
+]
