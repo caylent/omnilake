@@ -682,7 +682,8 @@ class ChainCoordinator:
             lk_req_init.validate(body=request.raw_lake_request)
 
 
-def __close_chain(chain: LakeChainRequest, chain_status: LakeChainRequestStatus, job_status: JobStatus):
+def __close_chain(chain: LakeChainRequest, chain_status: LakeChainRequestStatus, job_status: JobStatus,
+                  job_status_message: Optional[str] = None):
     """
     Closes out a chain request
 
@@ -696,6 +697,9 @@ def __close_chain(chain: LakeChainRequest, chain_status: LakeChainRequestStatus,
     parent_job = jobs.get(job_id=chain.job_id, job_type=chain.job_type)
 
     parent_job.status = job_status
+
+    if job_status_message:
+        parent_job.status_message = job_status_message
 
     end_time = datetime.now(tz=utc_tz)
 
@@ -917,7 +921,20 @@ def handle_initiate_chain(event, context):
 
         logging.debug("Validating chain")
 
-        coordinator.validate_chain()
+        try:
+            coordinator.validate_chain()
+
+        except Exception as val_e:
+            logging.debug(f"Chain validation failed: {val_e}")
+
+            chains = LakeChainRequestsClient()
+
+            chain = chains.get(chain_request_id=event_body["chain_request_id"])
+
+            __close_chain(chain=chain, chain_status=LakeChainRequestStatus.FAILED, job_status=JobStatus.FAILED,
+                          job_status_message=str(val_e))
+
+            return
 
         logging.debug("Chain validation complete")
 
