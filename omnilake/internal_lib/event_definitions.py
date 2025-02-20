@@ -155,10 +155,11 @@ class LakeRequestLookupResponse(ObjectBodySchema):
         SchemaAttribute(
             name='entry_ids',
             type=SchemaAttributeType.STRING_LIST,
-            required=True,
+            required=False,
+            default_value=[],
         ),
         SchemaAttribute(
-            name="event_type",
+            name='event_type',
             type=SchemaAttributeType.STRING,
             required=False,
             default_value="omnilake_lake_lookup_response",

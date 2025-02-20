@@ -196,6 +196,9 @@ class VectorStorageSearch:
 
         logging.info(f'Vector storage query returned {len(resulting_entries)} results.')
 
+        if not resulting_entries:
+            return []
+
         de_duplicated_entries = self._remove_source_duplicates(entries=resulting_entries)
 
         if prioritize_tags:

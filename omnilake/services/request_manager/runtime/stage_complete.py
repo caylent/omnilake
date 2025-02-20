@@ -213,7 +213,7 @@ def handler(event, context):
                 lake_request=lake_request,
                 lake_requests_client=lake_requests,
                 response_status=LakeRequestStatus.FAILED,
-                status_message="No entries found",
+                status_message="Lookup returned no entries",
             )
 
             return
