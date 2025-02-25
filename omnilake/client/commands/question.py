@@ -14,6 +14,8 @@ from omnilake.client.request_definitions import (
     VectorLookup,
 )
 
+from omnilake.internal_lib.ai import ModelIDs
+
 
 from omnilake.client.commands.base import Command
 
@@ -112,6 +114,7 @@ class QuestionCommand(Command):
             ],
             processing_instructions=SummarizationProcessor(
                 goal=goal,
+                model_id="anthropic.claude-v2:1",
                 include_source_metadata=True,
             ),
             response_config=DirectResponseConfig(),

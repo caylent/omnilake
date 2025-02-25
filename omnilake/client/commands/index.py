@@ -49,8 +49,9 @@ class RefreshIndexCommand(Command):
         try:
             archive = CreateArchive(
                 archive_id=archive_name,
-                configuration=VectorArchiveConfiguration(),
+                configuration=VectorArchiveConfiguration(tag_model_id="anthropic.claude-v2:1"),
                 description=f'Archive for local file directory {archive_name} from somone\'s computer :shrug:',
+
             )
 
             self.omnilake.request(archive)
