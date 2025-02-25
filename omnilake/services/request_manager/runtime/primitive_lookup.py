@@ -213,18 +213,26 @@ def handler(event, context):
 
             related_request = get_related_request(related_request_id=related_request_id)
 
-            entry_ids = [related_request.response_entry_id]
+            if related_request:
+                entry_ids = [related_request.response_entry_id]
+
+            else:
+                entry_ids = []
 
         elif request_type == 'RELATED_SOURCES':
             request_id = event_body.get('request_id')
 
             logging.debug(f'Performing related sources lookup for request ID {request_id}')
 
-            related_request_id = event_body.get('response_entry_id')
+            related_request_id = request_body['related_request_id']
 
             related_request = get_related_request(related_request_id=related_request_id)
 
-            entry_ids = related_request.response_sources
+            if related_request:
+                entry_ids = list(related_request.response_sources)
+
+            else:
+                entry_ids = []
 
         else:
             raise ValueError(f'Invalid request type {request_type}')
