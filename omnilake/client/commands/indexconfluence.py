@@ -3,10 +3,8 @@ import time
 from logging import getLogger
 from typing import Optional
 
-import pypdf
 from atlassian import Confluence
 import html2text
-import os
 
 from omnilake.client.client import OmniLake
 from omnilake.client.request_definitions import (
@@ -18,9 +16,6 @@ from omnilake.client.request_definitions import (
 )
 
 from omnilake.client.commands.base import Command
-
-from omnilake.client.fileutil import collect_files
-
 
 logger = getLogger(__name__)
 
@@ -76,13 +71,13 @@ class IndexConfluenceSpaceCommand(Command):
     def list_pages(self,space_key):
         """
         List all existing pages in the Confluence space.
-        :param space_key: Confluence space key to list pages from
+        :par fram space_key: Confluence space key to list pagesom
         :return: List of pages
         """
         print('Listing pages for space {}'.format(space_key))
         return self.confluence.get_all_pages_from_space(space_key, start=0, limit=0)
 
-    def create_source_type(self):
+    def create_confluence_page_source_type(self):
         """
         Create a source type if it doesn't exist
         """
@@ -102,11 +97,11 @@ class IndexConfluenceSpaceCommand(Command):
             else:
                 raise
 
-    def _index_confluence_page(self, archive_name: str, page_id: str):
+    def _index_confluence_page(self, archive_id: str, page_id: str):
         """
-        Download and save the content of a Confluence page as HTML.
-        :param page: A page dictionary object from Confluence API
-        :return: The path where the HTML file is saved
+        Download and save the content of a Confluence page
+        :param archive_id: the id of the archive where the page will be assigned to
+        :param page_id: the id of the confluence page that is being indexed
         """
         print(f'Indexing page {page_id}...')
         # Retrieve page content in storage format (HTML)
@@ -128,7 +123,7 @@ class IndexConfluenceSpaceCommand(Command):
         entry = AddEntry(
             content=clear_html_content,
             sources=[source_rn],
-            destination_archive_id=archive_name,
+            destination_archive_id=archive_id,
             original_of_source=source_rn
         )
 
@@ -146,6 +141,7 @@ class IndexConfluenceSpaceCommand(Command):
         )
         pages = self.list_pages(args.spacekey)
 
+        self.create_confluence_page_source_type()
         self.create_archive(args.archiveid)
 
         for page in pages:
