@@ -93,6 +93,8 @@ class ChainCommand(Command):
 
         job_status = job_resp.response_body['status']
 
+        job_failed = False
+
         while job_status != 'COMPLETED':
             time.sleep(10)
 
@@ -103,6 +105,8 @@ class ChainCommand(Command):
 
                 if job_status == 'FAILED':
                     print(f'Job failed: {job_resp.response_body["status_message"]}')
+
+                    job_failed = True
 
                     break
 
@@ -117,6 +121,14 @@ class ChainCommand(Command):
         total_run_time = ended - started
 
         print(f'Total run time: {total_run_time}')
+
+        if job_failed:
+            status_message = job_resp.response_body.get('status_message')
+
+            if status_message:
+                print(f'Status Message: {status_message}')
+
+            return
 
         chain_describe = DescribeChainRequest(
             chain_request_id=chain_id,

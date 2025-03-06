@@ -126,6 +126,36 @@ class LakeConstructProcessorRecursiveSummarizationStack(Stack):
             timeout=Duration.minutes(5),
         )
 
+        self.catch_failures = EventBusSubscriptionFunction(
+            base_image=self.app_base_image,
+            construct_id='omnilake-processor-summarization-failures',
+            event_type='omnilake_processor_summarizer_failure',
+            description='Catch summary request failures',
+            entry=self.runtime_path,
+            index='failure.py',
+            handler='handler',
+            function_name=resource_namer('processor-recursive-summary-failure', scope=self),
+            memory_size=256,
+            resource_access_requests=[
+                ResourceAccessRequest(
+                    resource_name='event_bus',
+                    resource_type=ResourceType.ASYNC_SERVICE,
+                ),
+                ResourceAccessRequest(
+                    resource_type=ResourceType.TABLE,
+                    resource_name=Job.table_name,
+                    policy_name='read_write'
+                ),
+                ResourceAccessRequest(
+                    resource_type=ResourceType.TABLE,
+                    resource_name=SummaryJob.table_name,
+                    policy_name='read_write'
+                ),
+            ],
+            scope=self,
+            timeout=Duration.minutes(1),
+        )
+
         self.summarization_processor = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
             construct_id='omnilake-processor-summarization-process',

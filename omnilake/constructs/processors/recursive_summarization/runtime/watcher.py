@@ -27,7 +27,12 @@ from omnilake.constructs.processors.recursive_summarization.runtime.event_defini
     SummarizationRequestSchema,
 )
 
-from omnilake.constructs.processors.recursive_summarization.tables.summary_jobs.client import SummaryJobsTableClient
+from omnilake.constructs.processors.recursive_summarization.runtime.failure import FAILURE_EVENT_TYPE
+
+from omnilake.constructs.processors.recursive_summarization.tables.summary_jobs.client import (
+    SummaryJobStatus,
+    SummaryJobsTableClient,
+)
 
 
 _FN_NAME = "omnilake.constructs.processors.recursive_summarization.watcher"
@@ -51,7 +56,7 @@ def handler(event: Dict, context: Dict):
 
     summary_request_id = event_body["summary_request_id"]
 
-    remaining_processes = summary_jobs.add_completed_entry(
+    summarization_job = summary_jobs.add_completed_entry(
         entry_id=event_body["entry_id"],
         summary_request_id=summary_request_id,
     )
@@ -67,12 +72,15 @@ def handler(event: Dict, context: Dict):
 
     logging.debug(f'Added entry {event_body["entry_id"]} to summary job {event_body["summary_request_id"]}.')
 
-    if remaining_processes != 0:
-        logging.debug(f'Summary job {summary_request_id} still has {remaining_processes} remaining processes.')
+    if summarization_job.remaining_processes != 0:
+        logging.info(f'Summary job {summary_request_id} has {summarization_job.remaining_processes} remaining processes.')
 
         return
 
-    summarization_job = summary_jobs.get(summary_request_id=event_body["summary_request_id"], consistent_read=True)
+    if summarization_job.execution_status == SummaryJobStatus.FAILED:
+        logging.info(f'Summary job {summary_request_id} has failed ... exiting process.')
+
+        return
 
     event_bus = EventPublisher()
 
@@ -107,6 +115,10 @@ def handler(event: Dict, context: Dict):
         omni_jobs.put(omni_job)
 
         logging.info(f'Final response event submitted for summary job {summarization_job.summary_request_id}.')
+
+        summarization_job.execution_status = SummaryJobStatus.COMPLETED
+
+        summary_jobs.put(summarization_job)
 
         return
 
@@ -172,6 +184,7 @@ def handler(event: Dict, context: Dict):
         event_bus.submit(
             event=source_event.next_event(
                 body=request_body.to_dict(),
+                callback_event_type_on_failure=FAILURE_EVENT_TYPE,
                 event_type=request_body.get("event_type"),
             )
         )

@@ -776,7 +776,7 @@ def handle_lake_response(event, context):
     if lake_request.request_status != LakeRequestStatus.COMPLETED:
         logging.debug("Lake request did not complete successfully ... failing chain")
 
-        chain = chains.get(lake_chain_request_id=running_request.chain_request_id)
+        chain = chains.get(chain_request_id=running_request.chain_request_id)
 
         __close_chain(chain=chain, chain_status=LakeChainRequestStatus.FAILED, job_status=JobStatus.FAILED)
 

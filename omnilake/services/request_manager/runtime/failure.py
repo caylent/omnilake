@@ -19,7 +19,7 @@ from omnilake.tables.lake_requests.client import (
     LakeRequestStatus,
 )
 
-CALLBACK_ON_FAILURE_EVENT_TYPE = 'omnilake_lake_request_failure'
+from omnilake.services.request_manager.runtime.stage_complete import close_out
 
 
 _FN_NAME = 'omnilake.services.request_manager.lake_request_failure'
@@ -38,29 +38,31 @@ def handler(event, context):
         body=source_event.body
     )
 
-    originating_event_details = event_body.get('originating_event_details')
+    originating_event_details = event_body['originating_event_details']
 
-    if not originating_event_details:
-        raise ValueError(f'originating_event_details not found in event body: {event_body.to_dict()}')
-
-    lake_request_id = originating_event_details.get('lake_request_id')
+    lake_request_id = originating_event_details['lake_request_id']
 
     # Close the lake request
     lake_requests = LakeRequestsClient()
 
     lake_request = lake_requests.get(lake_request_id=lake_request_id)
 
-    lake_request.request_status = LakeRequestStatus.FAILED
+    status_message = None
 
-    lake_requests.put(lake_request)
+    # Check for the Da Vinci Bus Response Reason, use that as the status message
+    da_vinci_bus_response = event_body.get('da_vinci_event_bus_response')
 
-    # Close out the job
-    jobs = JobsClient()
+    if da_vinci_bus_response:
+        failure_reason = da_vinci_bus_response.get('reason')
 
-    request_job = jobs.get(job_id=lake_request.job_id, job_type=lake_request.job_type)
+        if failure_reason:
+            status_message = failure_reason
 
-    request_job.status = JobStatus.FAILED
+    close_out(
+        lake_request=lake_request,
+        lake_requests_client=lake_requests,
+        response_status=LakeRequestStatus.FAILED,
+        status_message=status_message,
+    )
 
-    request_job.ended = datetime.now(tz=utc_tz)
-
-    jobs.put(request_job)
+    logging.info(f'Lake request {lake_request_id} failed')

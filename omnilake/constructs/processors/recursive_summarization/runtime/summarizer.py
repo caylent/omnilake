@@ -143,7 +143,7 @@ _FN_NAME = "omnilake.constructs.processors.recursive_summarization.summarizer"
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME,
-                   logger=Logger(_FN_NAME))
+                   logger=Logger(_FN_NAME), handle_callbacks=True)
 def handler(event: Dict, context: Dict):
     '''
     Summarizes the content of the resources.

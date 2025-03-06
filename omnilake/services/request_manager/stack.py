@@ -216,7 +216,7 @@ class LakeRequestManagerStack(Stack):
         self.catch_failures = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
             construct_id='omnilake-lake-request-handle-failures',
-            event_type='omnilake_request_internal_failure',
+            event_type='omnilake_lake_request_failure',
             description='Catch all lake request failures',
             entry=self.runtime_path,
             index='failure.py',

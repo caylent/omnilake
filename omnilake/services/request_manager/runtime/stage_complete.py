@@ -20,6 +20,8 @@ from omnilake.internal_lib.event_definitions import (
     LakeRequestInternalResponseEventBodySchema,
 )
 
+from omnilake.internal_lib.exceptions import CALLBACK_ON_FAILURE_EVENT_TYPE
+
 from omnilake.tables.jobs.client import JobsClient, JobStatus
 from omnilake.tables.lake_requests.client import (
     LakeRequest,
@@ -31,8 +33,6 @@ from omnilake.tables.registered_request_constructs.client import (
     RegisteredRequestConstructsClient,
     RequestConstructType,
 )
-
-CALLBACK_ON_FAILURE_EVENT_TYPE = "omnilake_request_internal_failure"
 
 
 def _get_construct(operation_name: str, registered_construct_type: str, registered_construct_name: str) -> Dict:
@@ -60,7 +60,7 @@ def _get_construct(operation_name: str, registered_construct_type: str, register
     }
 
 
-def _close_out(lake_request: LakeRequest, lake_requests_client: LakeRequestsClient, entry_ids: List[str] = None,
+def close_out(lake_request: LakeRequest, lake_requests_client: LakeRequestsClient, entry_ids: List[str] = None,
                response_status: LakeRequestStatus = LakeRequestStatus.COMPLETED, status_message: str = None):
     """
     Close out the request and update the status.
@@ -111,6 +111,8 @@ def _close_out(lake_request: LakeRequest, lake_requests_client: LakeRequestsClie
         body=lake_request_finished_event,
         event_type=lake_request_finished_event.get("event_type"),
     ))
+
+    logging.debug(f"Request {lake_request.lake_request_id} completed, sent completion event")
 
 
 _FN_NAME = 'omnilake.services.request_manager.lake_request_stage_complete'
@@ -183,7 +185,7 @@ def handler(event, context):
     if job.status == JobStatus.FAILED:
         logging.error(f"Parent job {lake_request.job_id} failed, marking request as failed")
 
-        _close_out(lake_request=lake_request, lake_requests_client=lake_requests, response_status=LakeRequestStatus.FAILED)
+        close_out(lake_request=lake_request, lake_requests_client=lake_requests, response_status=LakeRequestStatus.FAILED)
 
         return
 
@@ -209,7 +211,7 @@ def handler(event, context):
         if len(entry_ids) < 1:
             logging.debug(f"No entries found for request {lake_request.lake_request_id} ... failing request")
 
-            _close_out(
+            close_out(
                 lake_request=lake_request,
                 lake_requests_client=lake_requests,
                 response_status=LakeRequestStatus.FAILED,
@@ -240,7 +242,7 @@ def handler(event, context):
         if len(entry_ids) < 1:
             logging.debug(f"No entries found for request {lake_request.lake_request_id} ... failing request")
 
-            _close_out(
+            close_out(
                 lake_request=lake_request,
                 lake_requests_client=lake_requests,
                 response_status=LakeRequestStatus.FAILED,
@@ -252,7 +254,7 @@ def handler(event, context):
         elif len(entry_ids) > 1:
             logging.debug(f"Too many entries returned by processor {lake_request.lake_request_id} ... failing request")
 
-            _close_out(
+            close_out(
                 lake_request=lake_request,
                 lake_requests_client=lake_requests,
                 response_status=LakeRequestStatus.FAILED,
@@ -275,7 +277,7 @@ def handler(event, context):
     elif last_known_stage == LakeRequestStage.RESPONDING:
         logging.info(f"Request is complete, closing out")
 
-        _close_out(lake_request=lake_request, entry_ids=entry_ids, lake_requests_client=lake_requests)
+        close_out(lake_request=lake_request, entry_ids=entry_ids, lake_requests_client=lake_requests)
 
         return
 
