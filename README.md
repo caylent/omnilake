@@ -61,6 +61,14 @@ To utilize Omnilake effectively, you should include it as a dependency for your 
 - [Da Vinci Framework](https://github.com/jarosser06/da-vinci)
 - AWS CLI configured with appropriate credentials
 - AWS Account (Max managed policies limit must be bumped to 20)
+
+```bash
+aws service-quotas request-service-quota-increase \
+  --service-code iam \
+  --quota-code L-0DA4ABF3 \
+  --desired-value 20
+```
+
 - Lambda functions are deployed using containers. These functions are configured for Graviton (ARM), deployment/image-build must be done from an ARM based system.
 
 ### Installation
