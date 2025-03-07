@@ -121,12 +121,3 @@ class LakeIngestionServiceStack(Stack):
             scope=self,
             timeout=Duration.minutes(5),
         )
-
-        self.validate_content_uniqueness = GlobalSetting(
-            description='Validates the content is unique before adding it to the storage. Uses the sha256 hash of the entry content.',
-            namespace='omnilake::ingestion',
-            setting_key='enforce_content_uniqueness',
-            setting_value='False',
-            scope=self,
-            setting_type=GlobalSettingType.BOOLEAN
-        )

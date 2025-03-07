@@ -5,7 +5,7 @@ import logging
 
 import boto3
 
-from datetime import datetime
+from datetime import datetime, UTC as utc_tz
 from typing import Any, Dict, List
 
 from botocore.exceptions import ClientError
@@ -65,6 +65,11 @@ class RawManager(SimpleRESTServiceBase):
                     path='/get_entry'
                 ),
                 Route(
+                    handler=self.get_existing_source_entry,
+                    method='POST',
+                    path='/get_existing_source_entry'
+                ),
+                Route(
                     handler=self.save_entry,
                     method='POST',
                     path='/save_entry'
@@ -75,6 +80,55 @@ class RawManager(SimpleRESTServiceBase):
         self.raw_bucket = setting_value(namespace='omnilake::storage', setting_key='raw_entry_bucket')
 
         self.s3 = boto3.client('s3')
+
+    def _set_source_latest_content_entry_id(self, entry_effective_date: datetime, entry_id: str, original_of_source: str):
+        """
+        Sets the latest content entry ID of the source.
+
+        Keyword arguments:
+        entry_effective_date -- The effective date of the entry
+        entry_id -- The entry ID to set
+        original_of_source -- The original source to set the latest content entry ID for
+        """
+        sources = SourcesClient()
+
+        source_rn = SourceResourceName.from_resource_name(original_of_source)
+
+        source = sources.get(source_type=source_rn.resource_id.source_type, source_id=source_rn.resource_id.source_id)
+
+        if not source:
+            raise ValueError(f"Unable to locate source {source_rn}")
+
+        if not source.latest_content_entry_id:
+            logging.debug(f"Entry ID not set for latest_content_entry_id .. setting for source {source_rn} to {entry_id}")
+
+            source.latest_content_entry_id = entry_id
+
+        else:
+            entries = EntriesClient()
+
+            latest_entry = entries.get(entry_id=source.latest_content_entry_id)
+
+            # Set timezone to UTC before conversion
+            if entry_effective_date.tzinfo is None:
+                entry_effective_date = entry_effective_date.replace(tzinfo=utc_tz)
+
+            if latest_entry:
+                latest_entry_effective_date = latest_entry.effective_on.replace(tzinfo=utc_tz)
+
+                if latest_entry_effective_date < entry_effective_date:
+                    logging.debug(f"Setting latest entry ID for source {source_rn} to {entry_id}")
+
+                    source.latest_content_entry_id = entry_id
+                else:
+                    logging.debug(f"Latest entry {source.latest_content_entry_id} for source {source_rn} is newer than the entry {entry_id} being added")
+
+            else:
+                logging.debug(f"Setting latest entry ID for source {source_rn} to {entry_id}")
+
+                source.latest_content_entry_id = entry_id
+
+        sources.put(source)
 
     def check_object_exists(self, bucket: str, key: str):
         try:
@@ -89,7 +143,7 @@ class RawManager(SimpleRESTServiceBase):
                 raise
 
     def create_entry_with_source(self, content: str, source_arguments: Dict[str, Any], source_type: str,
-                                 effective_on: str = None):
+                                 effective_on: str = None, update_if_existing: bool = True):
         """
         Creates an entry with a source
 
@@ -123,6 +177,14 @@ class RawManager(SimpleRESTServiceBase):
         existing_source = sources.get_by_attribute_key(attribute_key=attribute_key)
 
         if existing_source:
+            if not update_if_existing:
+                entry_id = existing_source.latest_content_entry_id
+
+                return self.respond(
+                    body={'entry_id': entry_id},
+                    status_code=200
+                )
+
             source_rn = SourceResourceName(
                 resource_id=existing_source.source_type + '/' + existing_source.source_id
             )
@@ -138,14 +200,23 @@ class RawManager(SimpleRESTServiceBase):
 
             source_rn = SourceResourceName(resource_id=source.source_type + '/' + source.source_id)
 
-        return self.create_entry(content=content, sources=[str(source_rn)], effective_on=effective_on)
+        return self.create_entry(
+            content=content,
+            sources=[str(source_rn)],
+            effective_on=effective_on,
+            original_of_source=str(source_rn)
+        )
 
-    def create_entry(self, content: str, sources: List[str], effective_on: str = None):
+    def create_entry(self, content: str, sources: List[str], effective_on: str = None,
+                     original_of_source: str = None):
         """
         Creates an entry
 
         Keyword arguments:
         content -- The content of the entry
+        sources -- The sources of the entry
+        effective_on -- The effective date of the entry
+        original_of_source -- The original source of the entry
         """
         if effective_on:
             effective_on = datetime.fromisoformat(effective_on)
@@ -154,6 +225,7 @@ class RawManager(SimpleRESTServiceBase):
             char_count=len(content),
             content_hash=Entry.calculate_hash(content),
             effective_on=effective_on,
+            original_of_source=original_of_source,
             sources=set(sources),
         )
 
@@ -170,6 +242,13 @@ class RawManager(SimpleRESTServiceBase):
             Key=entry_id,
             Body=content,
         )
+
+        if original_of_source:
+            self._set_source_latest_content_entry_id(
+                entry_effective_date=entry.effective_on,
+                entry_id=entry_id,
+                original_of_source=original_of_source,
+            )
 
         return self.respond(
             body={"entry_id": entry_id},
@@ -243,6 +322,48 @@ class RawManager(SimpleRESTServiceBase):
 
         return self.respond(
             body={'content': response['Body'].read().decode()},
+            status_code=200
+        )
+
+    def get_existing_source_entry(self, source_type: str, source_arguments: Dict[str, Any]):
+        """
+        Gets an existing source
+
+        Keyword arguments:
+        source_type -- The source type name
+        source_arguments -- The source arguments
+        """
+        source_types = SourceTypesClient()
+
+        source_type_obj = source_types.get(source_type_name=source_type)
+
+        if not source_type_obj:
+            return self.respond(
+                body={'message': 'Source type not found'},
+                status_code=404,
+            )
+
+        sources = SourcesClient()
+
+        try:
+            attribute_key = source_type_obj.generate_key(source_arguments=source_arguments)
+
+        except ValueError as e:
+            return self.respond(
+                body=str(e),
+                status_code=400,
+            )
+
+        source = sources.get_by_attribute_key(attribute_key=attribute_key)
+
+        if not source:
+            return self.respond(
+                body={'message': 'Source not found'},
+                status_code=404,
+            )
+
+        return self.respond(
+            body={'entry_id': source.latest_content_entry_id},
             status_code=200
         )
 

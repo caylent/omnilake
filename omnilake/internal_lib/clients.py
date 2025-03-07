@@ -97,7 +97,8 @@ class RawStorageManager(RESTClientBase):
             resource_name='raw_storage_manager'
         )
 
-    def create_entry(self, content: str, sources: Union[List[str], Set[str]], effective_on: Union[datetime, str] = None):
+    def create_entry(self, content: str, sources: Union[List[str], Set[str]], effective_on: Union[datetime, str] = None,
+                     original_of_source: Optional[str] = None):
         '''
         Creates an entry from scratch, manages the entries table and the raw entry bucket
 
@@ -105,6 +106,7 @@ class RawStorageManager(RESTClientBase):
         content -- The content of the entry
         effective_on -- The effective date of the entry
         sources -- The sources of the entry
+        original_of_source -- The resource name of the source that this entry is content of
         '''
         effective_on_str = effective_on
 
@@ -117,18 +119,21 @@ class RawStorageManager(RESTClientBase):
                 'content': content,
                 'sources': list(sources),
                 'effective_on': effective_on_str,
+                'original_of_source': original_of_source,
             }
         )
 
-    def create_entry_with_source(self, content: str, source_type: str, source_arguments: Dict, effective_on: Union[datetime, str] = None):
+    def create_entry_with_source(self, content: str, source_type: str, source_arguments: Dict, effective_on: Union[datetime, str] = None,
+                                 update_if_existing: bool = True):
         '''
-        Creates an entry from scratch, manages the entries table and the raw entry bucket
+        Creates an original entry along with it's source from scratch
 
         Keyword arguments:
         content -- The content of the entry
         effective_on -- The effective date of the entry
         source_type -- The type of the source
         source_arguments -- The arguments for the source
+        update_if_existing -- Whether to update the entry if it already exists
         '''
         effective_on_str = effective_on
 
@@ -142,6 +147,7 @@ class RawStorageManager(RESTClientBase):
                 'source_type': source_type,
                 'source_arguments': source_arguments,
                 'effective_on': effective_on_str,
+                'update_if_existing': update_if_existing,
             }
         )
 
@@ -173,6 +179,22 @@ class RawStorageManager(RESTClientBase):
         entry_id -- The entry ID
         '''
         return self.post(path='/get_entry', body={'entry_id': entry_id})
+
+    def get_existing_source_entry(self, source_type: str, source_arguments: Dict):
+        '''
+        Gets an existing source entry
+
+        Keyword arguments:
+        source_type -- The source type
+        source_arguments -- The source arguments
+        '''
+        return self.post(
+            path='/get_existing_source_entry',
+            body={
+                'source_type': source_type,
+                'source_arguments': source_arguments
+            }
+        )
 
     def save_entry(self, entry_id: str, content: str):
         '''
