@@ -40,7 +40,7 @@ def handler(event, context):
 
     originating_event_details = event_body['originating_event_details']
 
-    lake_request_id = originating_event_details['lake_request_id']
+    lake_request_id = originating_event_details['event_body']['lake_request_id']
 
     # Close the lake request
     lake_requests = LakeRequestsClient()

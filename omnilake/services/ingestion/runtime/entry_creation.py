@@ -6,7 +6,6 @@ import logging
 from datetime import datetime, UTC as utc_tz
 from typing import Dict, List
 
-from da_vinci.core.global_settings import setting_value
 from da_vinci.core.immutable_object import ObjectBody
 from da_vinci.core.logging import Logger
 
@@ -26,7 +25,7 @@ from omnilake.internal_lib.naming import (
     SourceResourceName,
 )
 
-from omnilake.tables.entries.client import Entry, EntriesClient, EntriesScanDefinition
+from omnilake.tables.entries.client import EntriesClient
 from omnilake.tables.jobs.client import JobsClient, JobStatus
 from omnilake.tables.provisioned_archives.client import ArchivesClient
 from omnilake.tables.registered_request_constructs.client import (
@@ -103,77 +102,6 @@ def _validate_sources(sources: List[str], original_of_source: str = None):
             )
 
 
-def _validate_uniqueness(content_content_hash: str):
-    """
-    Validates the uniqueness of the content against the existing entries.
-
-    Keyword arguments:
-    content_content_hash -- The content hash to validate
-    """
-    entries = EntriesClient()
-
-    scan_def = EntriesScanDefinition()
-
-    scan_def.add('content_hash', 'equal', content_content_hash)
-
-    res = entries.full_scan(scan_def)
-
-    if res:
-        existing_entry_ids = [entry.entry_id for entry in res]
-
-        raise ValueError(f"Content with hash {content_content_hash} already exists in entries: {existing_entry_ids}")
-
-
-def _set_source_latest_content_entry_id(entry_effective_date: datetime, entry_id: str, original_of_source: str):
-    """
-    Sets the latest content entry ID of the source.
-
-    Keyword arguments:
-    entry_effective_date -- The effective date of the entry
-    entry_id -- The entry ID to set
-    original_of_source -- The original source to set the latest content entry ID for
-    """
-    sources = SourcesClient()
-
-    source_rn = SourceResourceName.from_resource_name(original_of_source)
-
-    source = sources.get(source_type=source_rn.resource_id.source_type, source_id=source_rn.resource_id.source_id)
-
-    if not source:
-        raise ValueError(f"Unable to locate source {source_rn}")
-
-    if not source.latest_content_entry_id:
-        logging.debug(f"Entry ID not set for latest_content_entry_id .. setting for source {source_rn} to {entry_id}")
-
-        source.latest_content_entry_id = entry_id
-
-    else:
-        entries = EntriesClient()
-
-        latest_entry = entries.get(entry_id=source.latest_content_entry_id)
-
-        # Set timezone to UTC before conversion
-        if entry_effective_date.tzinfo is None:
-            entry_effective_date = entry_effective_date.replace(tzinfo=utc_tz)
-
-        if latest_entry:
-            latest_entry_effective_date = latest_entry.effective_on.replace(tzinfo=utc_tz)
-
-            if latest_entry_effective_date < entry_effective_date:
-                logging.debug(f"Setting latest entry ID for source {source_rn} to {entry_id}")
-
-                source.latest_content_entry_id = entry_id
-            else:
-                logging.debug(f"Latest entry {source.latest_content_entry_id} for source {source_rn} is newer than the entry {entry_id} being added")
-
-        else:
-            logging.debug(f"Setting latest entry ID for source {source_rn} to {entry_id}")
-
-            source.latest_content_entry_id = entry_id
-
-    sources.put(source)
-
-
 def _get_index_endpoint(archive_id: str) -> str:
     """
     Gets the index endpoint for the archive.
@@ -248,45 +176,18 @@ def handler(event: Dict, context: Dict):
 
         jobs.put(job)
 
-        effective_on = effective_on
-
-        if effective_on:
-            effective_on = datetime.fromisoformat(effective_on)
-
-        entry = Entry(
-            char_count=len(content),
-            content_hash=Entry.calculate_hash(content),
-            effective_on=effective_on,
-            original_of_source=original_of_source,
-            sources=set(sources),
-        )
-
-        enforce_content_uniqueness = setting_value('omnilake::ingestion', 'enforce_content_uniqueness')
-
-        if enforce_content_uniqueness:
-            content_uniqueness_validation = job.create_child(job_type='CONTENT_UNIQUENESS_VALIDATION')
-
-            jobs.put(job)
-
-            with jobs.job_execution(content_uniqueness_validation, fail_all_parents=True, skip_completion=True):
-                _validate_uniqueness(entry.content_hash)
-
-        entries = EntriesClient()
-
-        entries.put(entry)
-
         storage_mgr = RawStorageManager()
 
-        res = storage_mgr.save_entry(entry_id=entry.entry_id, content=content)
+        res = storage_mgr.create_entry(
+            content=content,
+            effective_on=effective_on,
+            original_of_source=original_of_source,
+            sources=sources
+        )
 
-        logging.debug(f"Save entry result: {res}")
+        logging.debug(f"Create entry result: {res}")
 
-        if original_of_source:
-            _set_source_latest_content_entry_id(
-                entry_effective_date=entry.effective_on,
-                entry_id=entry.entry_id,
-                original_of_source=original_of_source,
-            )
+        entry_id = res.response_body["entry_id"]
 
     destination_archive_id = event_body.get("destination_archive_id")
 
@@ -294,19 +195,23 @@ def handler(event: Dict, context: Dict):
     if destination_archive_id:
         event_publisher = EventPublisher()
 
+        entry_desc = storage_mgr.describe_entry(entry_id=entry_id)
+
+        effective_on_actual = entry_desc.response_body["effective_on"]
+
         index_body = ObjectBody(
             body={
                 "archive_id": destination_archive_id,
-                "effective_on": entry.effective_on,
-                "entry_id": entry.entry_id,
-                "original_of_source": entry.original_of_source,
+                "effective_on": effective_on_actual,
+                "entry_id": entry_id,
+                "original_of_source": original_of_source,
                 "parent_job_id": job.job_id,
                 "parent_job_type": job.job_type,
             },
             schema=IndexEntryEventBodySchema,
         )
 
-        logging.debug(f"Indexing entry {entry.entry_id} for archive {destination_archive_id}: {index_body.to_dict()}")
+        logging.debug(f"Indexing entry {entry_id} for archive {destination_archive_id}: {index_body.to_dict()}")
 
         event_type = _get_index_endpoint(archive_id=destination_archive_id)  
 

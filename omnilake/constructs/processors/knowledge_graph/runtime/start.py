@@ -31,7 +31,8 @@ from omnilake.constructs.processors.knowledge_graph.tables.knowledge_graph_jobs.
 _FN_NAME = "omnilake.constructs.processors.knowledge_graph.start"
 
 
-@fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME, logger=Logger(_FN_NAME))
+@fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME, logger=Logger(_FN_NAME),
+                   handle_callbacks=True)
 def handler(event: Dict, context: Dict):
     '''
     Kicks off the Knowledge Graph Processor.
