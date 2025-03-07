@@ -112,6 +112,7 @@ class QuestionCommand(Command):
             ],
             processing_instructions=SummarizationProcessor(
                 goal=goal,
+                model_id='anthropic.claude-v2:1',
                 include_source_metadata=True,
             ),
             response_config=DirectResponseConfig(),
