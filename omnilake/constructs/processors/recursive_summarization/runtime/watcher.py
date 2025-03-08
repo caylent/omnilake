@@ -43,7 +43,7 @@ def handler(event: Dict, context: Dict):
     '''
     Watches for summary events and triggers the summary process.
     '''
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
@@ -169,6 +169,7 @@ def handler(event: Dict, context: Dict):
 
         request_body = ObjectBody(
             body={
+                "effective_on_calculation_rule": summarization_job.configuration.get("effective_on_calculation_rule"),
                 "entry_ids": list(group),
                 "goal": summarization_job.goal,
                 "include_source_metadata": summarization_job.configuration.get("include_source_metadata"),

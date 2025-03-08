@@ -120,7 +120,7 @@ def handler(event: Dict, context: Dict):
     '''
     Summarizes the content of the resources.
     '''
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

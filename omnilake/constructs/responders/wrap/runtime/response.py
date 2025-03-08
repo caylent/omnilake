@@ -89,7 +89,7 @@ def final_responder(event: Dict, context: Dict) -> None:
     """
     Final responder function
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

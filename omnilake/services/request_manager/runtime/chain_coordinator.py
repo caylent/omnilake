@@ -22,6 +22,7 @@ from da_vinci.exception_trap.client import ExceptionReporter
 
 from omnilake.internal_lib.clients import RawStorageManager
 from omnilake.internal_lib.event_definitions import (
+    LakeChainCompletionEventBodySchema,
     LakeChainRequestEventBodySchema,
     LakeCompletionEventBodySchema,
     LakeRequestEventBodySchema,
@@ -112,7 +113,8 @@ class LakeChainRequestSchema(ObjectBodySchema):
     attributes = [
         SchemaAttribute(
             name="conditional",
-            type=SchemaAttributeType.BOOLEAN
+            type=SchemaAttributeType.BOOLEAN,
+            required=False
         ),
         SchemaAttribute(
             name="lake_request",
@@ -496,7 +498,7 @@ class ChainCoordinator:
         self.event_publisher = EventPublisher()
 
     @classmethod
-    def from_chain_request_id(cls, chain_request_id: str) -> 'ChainCoordinator':
+    def from_chain_request_id(cls, chain_request_id: str, chain_request: Optional[ChainRequest] = None) -> 'ChainCoordinator':
         """
         Loads a ChainCoordinator object from a chain request ID
 
@@ -505,12 +507,13 @@ class ChainCoordinator:
         """
         logging.debug(f"Loading chain coordinator for chain request ID: {chain_request_id}")
 
-        chain_requests = LakeChainRequestsClient()
-
-        chain_request = chain_requests.get(chain_request_id=chain_request_id, consistent_read=True)
-
         if not chain_request:
-            raise ValueError(f"Could not find chain request with ID: {chain_request_id}")
+            chain_requests = LakeChainRequestsClient()
+
+            chain_request = chain_requests.get(chain_request_id=chain_request_id, consistent_read=True)
+
+            if not chain_request:
+                raise ValueError(f"Could not find chain request with ID: {chain_request_id}")
 
         logging.debug(f"Loaded chain request: {chain_request.to_dict()}")
 
@@ -730,6 +733,31 @@ def __close_chain(chain: LakeChainRequest, chain_status: LakeChainRequestStatus,
 
     chains.put(chain)
 
+    if not chain.callback_event_type:
+        logging.info("No callback to notify, finished closing")
+
+        return
+
+    logging.info(f"Notifying chain response at event_type: {chain.callback_event_type}")
+
+    # If there is a callback_event_type, publish the response status
+    event_publisher = EventPublisher()
+
+    callback_event = ObjectBody(
+        body={
+            "chain_request_id": chain.chain_request_id,
+            "response_status": chain_status
+        },
+        schema=LakeChainCompletionEventBodySchema
+    )
+
+    event_publisher.submit(
+        event=EventBusEvent(
+            body=callback_event.to_dict(),
+            event_type=chain.callback_event_type
+        ),
+    )
+
 
 _FN_NAME = 'omnilake.services.request_manager.chain_coordinator.handle_lake_response'
 
@@ -739,7 +767,7 @@ def handle_lake_response(event, context):
     """
     Handles all lake request completion events
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
@@ -907,7 +935,7 @@ def handle_initiate_chain(event, context):
     """
     Handles incoming new chain requests
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
@@ -927,7 +955,28 @@ def handle_initiate_chain(event, context):
     with jobs.job_execution(job=job, skip_completion=True):
         logging.debug("Initializing new ChainCoordinator object")
 
-        coordinator = ChainCoordinator.from_chain_request_id(chain_request_id=event_body["chain_request_id"])
+        chain_request_id = event_body.get("chain_request_id")
+
+        chains = LakeChainRequestsClient()
+
+        chain_req = chains.get(chain_request_id=chain_request_id)
+
+        if not chain_req:
+            logging.debug("Creating new chain request")
+
+            chain_req = LakeChainRequest(
+                chain_request_id=chain_request_id,
+                chain=[link.to_dict() for link in event_body["chain"]],
+                job_id=event_body["job_id"],
+                job_type=event_body["job_type"],
+            )
+
+            chains.put(chain_req)
+
+        coordinator = ChainCoordinator.from_chain_request_id(
+            chain_request_id=event_body["chain_request_id"],
+            chain_request=chain_req,
+        )
 
         logging.debug("Validating chain")
 
@@ -952,6 +1001,11 @@ def handle_initiate_chain(event, context):
 
         # Set the chain status to executing
         chain = chains.get(chain_request_id=event_body["chain_request_id"])
+
+        callback_event_type = event_body.get("callback_event_type")
+
+        if callback_event_type:
+            chain.callback_event_type = callback_event_type
 
         chain.chain_execution_status = LakeChainRequestStatus.EXECUTING
 

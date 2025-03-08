@@ -20,7 +20,6 @@ from omnilake.tables.jobs.client import JobsClient, JobStatus
 
 # Local imports
 from omnilake.constructs.processors.recursive_summarization.runtime.event_definitions import (
-    SummarizationCompletedSchema,
     SummarizationRequestSchema,
 )
 
@@ -39,7 +38,7 @@ def handler(event: Dict, context: Dict):
     '''
     Watches for summary event failures, closes the execution and passes the failure on to the manager.
     '''
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
@@ -87,7 +86,9 @@ def handler(event: Dict, context: Dict):
     request_event_body = event_body.new(
         additions={
             "originating_event_details": {
-                "lake_request_id": summary_job.lake_request_id,
+                "event_body": {
+                    "lake_request_id": summary_job.lake_request_id,
+                },
             },
         }
     )

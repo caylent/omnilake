@@ -75,7 +75,7 @@ def handler(event: Dict, context: Dict):
     Lambda handler for the vector vacuum function. This function is responsible for vacuuming the vector store
     to determine and remove entries that are no longer needed.
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

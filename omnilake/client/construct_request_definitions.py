@@ -175,6 +175,39 @@ class BasicLookup(RequestBody):
         )
 
 
+class BulkEntryLookup(RequestBody):
+    """
+    This is a lookup instruction, it describes how the lake should lookup information.
+
+    This is a bulk lookup, it will lookup entries based on the provided information.
+
+    Keyword Arguments:
+    entry_ids -- The entry_ids to lookup
+    """
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'entry_ids',
+            attribute_type=RequestAttributeType.LIST,
+        ),
+
+        RequestBodyAttribute(
+            'request_type',
+            immutable_default='BULK_ENTRY',
+        ),
+    ]
+
+    def __init__(self, entry_ids: List[str]):
+        """
+        Initialize the BulkLookup
+
+        Keyword Arguments:
+        entry_ids -- The entry_ids to lookup
+        """
+        super().__init__(
+            entry_ids=entry_ids,
+        )
+
+
 class DirectEntryLookup(RequestBody):
     """
     This is a lookup instruction, it describes how the lake should lookup information.
@@ -412,6 +445,52 @@ class WebSiteLookup(RequestBody):
         )
 
 
+class InceptionProcessor(RequestBody):
+    """
+    Executes a sub-chain definition
+    """
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'chain_definition',
+            attribute_type=RequestAttributeType.OBJECT_LIST,
+        ),
+
+        RequestBodyAttribute(
+            'entry_distribution_mode',
+            attribute_type=RequestAttributeType.STRING,
+            default='ALL',
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'join_instructions',
+            attribute_type=RequestAttributeType.OBJECT,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'processor_type',
+            immutable_default='INCEPTION',
+        ),
+    ]
+
+    def __init__(self, chain_definition: List, entry_distribution_mode: Optional[str] = 'ALL',
+                join_instructions: Optional[dict] = None):
+            """
+            Initialize the InceptionProcessor
+    
+            Keyword Arguments:
+            chain_definition -- The chain definition to execute
+            entry_distribution_mode -- The entry distribution mode to use
+            join_instructions -- The join instructions to use
+            """
+            super().__init__(
+                chain_definition=chain_definition,
+                entry_distribution_mode=entry_distribution_mode,
+                join_instructions=join_instructions,
+            )
+
+
 ## LakeRequestProcessingInstructions
 class KnowledgeGraphProcessor(RequestBody):
     """
@@ -553,6 +632,14 @@ class SummarizationProcessor(RequestBody):
     ```
     """
     attribute_definitions = [
+        # Should be one of RUNTIME, NEWEST, OLDEST, AVERAGE
+        RequestBodyAttribute(
+            'effective_on_calculation_rule',
+            attribute_type=RequestAttributeType.STRING,
+            default='RUNTIME',
+            optional=True,
+        ),
+
         # Must always have a goal, but it won't be used when the prompt is provided
         RequestBodyAttribute(
             'goal',
@@ -581,18 +668,20 @@ class SummarizationProcessor(RequestBody):
         ),
     ]
 
-    def __init__(self, goal: str, include_source_metadata: Optional[bool] = None, model_id: Optional[str] = None,
-                 prompt: Optional[str] = None):
+    def __init__(self, goal: str, effective_on_calculation_rule: Optional[str] = None, include_source_metadata: Optional[bool] = None,
+                 model_id: Optional[str] = None, prompt: Optional[str] = None):
         """
         Initialize the SummarizationProcessor
 
         Keyword Arguments:
+        effective_on_calculation_rule -- How to determine the effective_on date for the final response
         goal -- The goal of the request
         include_source_metadata -- Whether or not to include the source metadata in the response
         model_id -- The model_id to use for summarization
         prompt -- The prompt to use for summarization
         """
         super().__init__(
+            effective_on_calculation_rule=effective_on_calculation_rule,
             goal=goal,
             include_source_metadata=include_source_metadata,
             model_id=model_id,

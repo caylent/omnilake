@@ -39,6 +39,7 @@ from omnilake.tables.registered_request_constructs.client import (
 from omnilake.services.request_manager.runtime.stage_complete import CALLBACK_ON_FAILURE_EVENT_TYPE
 
 from omnilake.services.request_manager.runtime.primitive_lookup import (
+    BulkEntryLookupSchema,
     DirectEntryLookupSchema,
     DirectSourceLookupSchema,
     RelatedRequestResponseLookupSchema,
@@ -73,6 +74,7 @@ class LakeRequestInit:
         self.originating_event = originating_event
 
         self.__lookup_primitive_schemas = {
+            "BULK_ENTRY": BulkEntryLookupSchema,
             "DIRECT_ENTRY": DirectEntryLookupSchema,
             "DIRECT_SOURCE": DirectSourceLookupSchema,
             "RELATED_RESPONSE": RelatedRequestResponseLookupSchema,
@@ -289,7 +291,7 @@ def handler(event, context):
     """
     Handler for Lake Request initialization
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

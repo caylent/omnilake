@@ -39,7 +39,7 @@ def handler(event: Dict, context: Dict):
     event -- The event that triggered the function.
     context -- The context of the function.
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

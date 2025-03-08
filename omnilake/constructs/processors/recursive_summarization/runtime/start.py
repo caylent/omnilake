@@ -41,7 +41,7 @@ def handler(event: Dict, context: Dict):
     '''
     Summarizes the content of the resources.
     '''
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
@@ -72,6 +72,7 @@ def handler(event: Dict, context: Dict):
     summary_job = SummaryJob(
         configuration=summary_req_body.to_dict(),
         goal=summary_req_body["goal"],
+        original_source_entry_ids=set(entries),
         parent_job_id=summarization_omni_job.job_id,
         parent_job_type=summarization_omni_job.job_type,
         lake_request_id=event_body["lake_request_id"],
@@ -85,6 +86,7 @@ def handler(event: Dict, context: Dict):
     for entry in entries:
         obj_body = ObjectBody(
             body={
+                "effective_on_calculation_rule": summary_req_body["effective_on_calculation_rule"],
                 "entry_ids": [entry],
                 "goal": summary_req_body["goal"],
                 "include_source_metadata": summary_req_body.get("include_source_metadata"),

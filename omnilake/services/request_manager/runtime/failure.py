@@ -3,8 +3,6 @@ Catch all lake request failures
 """
 import logging
 
-from datetime import datetime, UTC as utc_tz
-
 from da_vinci.core.immutable_object import ObjectBody
 from da_vinci.core.logging import Logger
 
@@ -13,7 +11,6 @@ from da_vinci.event_bus.event import Event as EventBusEvent
 
 from da_vinci.exception_trap.client import ExceptionReporter
 
-from omnilake.tables.jobs.client import JobsClient, JobStatus
 from omnilake.tables.lake_requests.client import (
     LakeRequestsClient,
     LakeRequestStatus,
@@ -30,7 +27,7 @@ def handler(event, context):
     """
     Catch all lake request failures
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
@@ -65,4 +62,5 @@ def handler(event, context):
         status_message=status_message,
     )
 
+    # Log all the things :laughing:
     logging.info(f'Lake request {lake_request_id} failed')

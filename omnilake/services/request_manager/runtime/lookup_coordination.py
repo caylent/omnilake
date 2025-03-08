@@ -27,7 +27,7 @@ def handler(event, context):
     """
     Response handler for the primitive lookup function.
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

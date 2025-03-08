@@ -34,7 +34,7 @@ def handler(event: Dict, context: Dict):
     '''
     Filters the provided knowledge graph communities.
     '''
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

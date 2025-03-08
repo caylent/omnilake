@@ -88,7 +88,7 @@ def handler(event: Dict, context: Dict):
     '''
     Handles the completion of an extraction process.
     '''
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

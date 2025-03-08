@@ -7,17 +7,26 @@ from da_vinci.core.immutable_object import (
 
 class RecursiveSummaryProcessor(ObjectBodySchema):
     attributes = [
+        # How to determine the effective_on date for the final response
+        # Support for RUNTIME, NEWEST, OLDEST, and AVERAGE
         SchemaAttribute(
-            name='include_source_metadata',
-            type=SchemaAttributeType.BOOLEAN,
+            name='effective_on_calculation_rule',
+            type=SchemaAttributeType.STRING,
             required=False,
-            default_value=False,
+            default_value='RUNTIME',
         ),
 
         SchemaAttribute(
             name='goal',
             type=SchemaAttributeType.STRING,
             required=True,
+        ),
+
+        SchemaAttribute(
+            name='include_source_metadata',
+            type=SchemaAttributeType.BOOLEAN,
+            required=False,
+            default_value=False,
         ),
 
         SchemaAttribute(

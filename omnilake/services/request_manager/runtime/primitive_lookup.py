@@ -29,6 +29,23 @@ from omnilake.tables.lake_requests.client import LakeRequest, LakeRequestsClient
 from omnilake.tables.sources.client import SourcesClient
 
 
+class BulkEntryLookupSchema(ObjectBodySchema):
+    attributes=[
+        SchemaAttribute(
+            name='entry_ids',
+            type=SchemaAttributeType.STRING_LIST,
+            required=True,
+        ),
+
+        SchemaAttribute(
+            name='request_type',
+            type=SchemaAttributeType.STRING,
+            required=False,
+            default_value='BULK_ENTRY',
+        )
+    ]
+
+
 class DirectEntryLookupSchema(ObjectBodySchema):
     attributes=[
         SchemaAttribute(
@@ -162,7 +179,7 @@ def handler(event, context):
     """
     Handles a primitive lookup request
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
@@ -192,6 +209,15 @@ def handler(event, context):
             _validate_entries(entry_ids=[entry_id])
 
             entry_ids = [entry_id]
+
+        elif request_type == 'BULK_ENTRY':
+            entry_ids = request_body['entry_ids']
+
+            logging.debug(f'Performing bulk entry lookup for entry IDs {entry_ids}')
+
+            _validate_entries(entry_ids=entry_ids)
+
+            entry_ids = entry_ids
 
         elif request_type == 'DIRECT_SOURCE':
             source_id = request_body['source_id']

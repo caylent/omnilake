@@ -101,12 +101,13 @@ async def load_web_content(urls: List[str]) -> List[str]:
 _FN_NAME = "omnilake.constructs.archives.web_site.lookup" 
 
 
-@fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME, logger=Logger(_FN_NAME))
+@fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME, logger=Logger(_FN_NAME),
+                   handle_callbacks=True)
 def handler(event: Dict, context: Dict):
     '''
     Handles the lookup of data in a web site archive.
     '''
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

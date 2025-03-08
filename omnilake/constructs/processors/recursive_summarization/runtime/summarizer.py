@@ -139,6 +139,55 @@ class SummaryPrompt:
         return self.generate(self.custom_prompt)
 
 
+def effective_on_calcuation(entry_ids: List[str], rule: str) -> datetime:
+    '''
+    Determines the effective_on date for response
+
+    Keyword arguments:
+    entry_ids -- the entry_ids to use for determining the effective_on date
+    rule -- the rule to use for determining the effective_on date
+    '''
+
+    if rule == 'RUNTIME':
+        return datetime.now(tz=utc_tz)
+
+    elif rule in ['AVERAGE', 'NEWEST', 'OLDEST']:
+        raw_storage = RawStorageManager()
+
+        # If there is only 1 entry ID, just return the effective_on date of that entry
+        if len(entry_ids) == 1:
+            entry_info = raw_storage.describe_entry(entry_id=entry_ids[0])
+
+            only_dt =  datetime.fromisoformat(entry_info.response_body["effective_on"])
+
+            only_dt.replace(tzinfo=utc_tz)
+
+            return only_dt
+
+        loaded_entries_w_dates = {}
+
+        for entry_id in entry_ids:
+            entry_info = raw_storage.describe_entry(entry_id=entry_id)
+
+            loaded_entries_w_dates[entry_id] = datetime.fromisoformat(entry_info.response_body["effective_on"])
+
+            loaded_entries_w_dates[entry_id].replace(tzinfo=utc_tz)
+
+        if rule == 'NEWEST':
+            return datetime.fromtimestamp(max(loaded_entries_w_dates.values()), tz=utc_tz)
+
+        elif rule == 'OLDEST':
+            return datetime.fromtimestamp(min(loaded_entries_w_dates.values()), tz=utc_tz)
+
+        else:
+            averaged_ts = sum([dt_val.timestamp() for dt_val in loaded_entries_w_dates.values()]) / len(loaded_entries_w_dates)
+
+            return datetime.fromtimestamp(averaged_ts, tz=utc_tz)
+
+    else:
+        raise ValueError(f"Unsupported effective_on calculation rule: {rule}")
+
+
 _FN_NAME = "omnilake.constructs.processors.recursive_summarization.summarizer"
 
 
@@ -148,7 +197,7 @@ def handler(event: Dict, context: Dict):
     '''
     Summarizes the content of the resources.
     '''
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 
@@ -158,8 +207,8 @@ def handler(event: Dict, context: Dict):
     )
 
     summary_prompt = SummaryPrompt(
-        entry_ids=event_body.get("entry_ids"),
-        goal=event_body.get("goal"),
+        entry_ids=event_body["entry_ids"],
+        goal=event_body["goal"],
         include_source_metadata=event_body.get("include_source_metadata"),
         custom_prompt=event_body.get("prompt"),
     )
@@ -191,9 +240,16 @@ def handler(event: Dict, context: Dict):
 
         raw_storage = RawStorageManager()
 
+        effective_on = effective_on_calcuation(
+            entry_ids=event_body["entry_ids"],
+            rule=event_body['effective_on_calculation_rule'],
+        )
+
+        logging.debug(f'Calculated effective on date: {effective_on}')
+
         resp = raw_storage.create_entry(
             content=summarization_result.response,
-            effective_on=datetime.now(tz=utc_tz).isoformat(),
+            effective_on=effective_on.isoformat(),
             sources=sources
         )
 

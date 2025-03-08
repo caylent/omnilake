@@ -41,7 +41,7 @@ def handler(event: Dict, context: Dict) -> Dict:
     """
     Provisions a new archive, creating the initial vector store and archive record
     """
-    logging.debug(f'Recieved request: {event}')
+    logging.debug(f'Received request: {event}')
 
     source_event = EventBusEvent.from_lambda_event(event)
 

@@ -48,6 +48,14 @@ class Job(TableObject):
 
     attributes = [
         TableObjectAttribute(
+            name='children',
+            attribute_type=TableObjectAttributeType.STRING_LIST,
+            description='Any child jobs of the parent, listed strings in <job_type>:<job_id> format',
+            optional=True,
+            default=[],
+        ),
+
+        TableObjectAttribute(
             name='created_on',
             attribute_type=TableObjectAttributeType.DATETIME,
             description='The timestamp of when the job was created',
@@ -101,7 +109,7 @@ class Job(TableObject):
         ),
     ]
 
-    def create_child(self, job_type: str) -> 'Job':
+    def create_child(self, job_type: str, job_id: Optional[str] = None) -> 'Job':
         """
         Creates a child job
 
@@ -109,10 +117,13 @@ class Job(TableObject):
         job_type -- The type of job to create
         """
         child_job = Job(
+            job_id=job_id,
             job_type=job_type,
             parent_job_id=self.job_id,
             parent_job_type=self.job_type,
         )
+
+        self.children.append(f'{job_type}:{child_job.job_id}')
 
         return child_job
 
