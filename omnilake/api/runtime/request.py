@@ -3,6 +3,8 @@ Handles the Lake Requests and Lake Chain Requests
 """
 import logging
 
+from uuid import uuid4
+
 from da_vinci.core.immutable_object import (
     ObjectBody,
     ObjectBodySchema,
@@ -320,22 +322,12 @@ class LakeRequestAPI(ChildAPI):
 
         jobs.put(job)
 
-        req_dict = request.to_dict()
-
-        chain_request_obj = LakeChainRequest(
-            chain=req_dict['chain'],
-            job_id=job.job_id,
-            job_type=job.job_type,
-        )
-
-        chain_requests = LakeChainRequestsClient()
-
-        chain_requests.put(chain_request_obj)
+        chain_request_id = str(uuid4())
 
         event_body = ObjectBody(
             body={
                 "chain": request['chain'],
-                "chain_request_id": chain_request_obj.chain_request_id,
+                "chain_request_id": chain_request_id,
                 "job_id": job.job_id,
                 "job_type": job.job_type,
             },
@@ -353,7 +345,7 @@ class LakeRequestAPI(ChildAPI):
 
         return self.respond(
             body={
-                'chain_request_id': chain_request_obj.chain_request_id,
+                'chain_request_id': chain_request_id,
                 'job_id': job.job_id,
                 'job_type': job.job_type,
             },

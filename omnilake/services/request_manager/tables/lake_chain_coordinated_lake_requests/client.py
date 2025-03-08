@@ -1,4 +1,4 @@
-from datetime import datetime, UTC as utc_tz
+from datetime import datetime, timedelta, UTC as utc_tz
 from enum import StrEnum
 from hashlib import sha256
 from typing import Dict, List, Optional, Union
@@ -42,7 +42,22 @@ class LakeChainCoordinatedLakeRequest(TableObject):
         description="The unique identifier for the request",
     )
 
+    ttl_attribute = TableObjectAttribute(
+        name="time_to_live",
+        attribute_type=TableObjectAttributeType.DATETIME,
+        description="The time to live for the object.",
+        optional=True,
+        default=lambda: datetime.now(utc_tz) + timedelta(days=5),
+    )
+
     attributes = [
+        TableObjectAttribute(
+            name="callback_event_type",
+            attribute_type=TableObjectAttributeType.STRING,
+            description="The event type name to use for the callback.",
+            optional=True,
+        ),
+
         TableObjectAttribute(
             name="chain_request_name",
             attribute_type=TableObjectAttributeType.STRING,
@@ -86,28 +101,34 @@ class LakeChainCoordinatedLakeRequest(TableObject):
     ]
 
     def __init__(self, chain_request_name: str, chain_request_id: str, lake_request_id: str,
-                 created_on: Optional[datetime] = None, execution_status: Optional[Union[CoordinatedLakeRequestStatus, str]] = None,
+                 callback_event_type: Optional[str] = None, created_on: Optional[datetime] = None,
+                 execution_status: Optional[Union[CoordinatedLakeRequestStatus, str]] = None,
+                 time_to_live: Optional[datetime] = None,
                  validation_instructions: Optional[str] = None, validation_model_id: Optional[str] = None,
                  validation_status: Optional[Union[CoordinatedLakeRequestValidationStatus, str]] = None):
         """
         Initialize a LakeRequestChainRunningRequest object.
 
         Keyword Arguments:
+        callback_event_type -- The event type name to use for the callback.
         chain_request_id -- The unique identifier for the request chain.
         chain_request_name -- The unique name for the request.
         created_on -- The date and time the request was created.
         lake_request_id -- The unique identifier for the request
         execution_status -- The status of the request.
+        time_to_live -- The time to live for the object.
         validation_instructions -- The instructions for validating the request.
         validation_model_id -- The model id for the validation instructions.
         validation_status -- The results of the request validation. Either SUCCESS or FAILURE.
         """
         super().__init__(
+            callback_event_type=callback_event_type,
             chain_request_id=chain_request_id,
             chain_request_name=chain_request_name,
             created_on=created_on,
             lake_request_id=lake_request_id,
             execution_status=execution_status,
+            time_to_live=time_to_live,
             validation_instructions=validation_instructions,
             validation_model_id=validation_model_id,
             validation_status=validation_status,
@@ -172,6 +193,7 @@ class LakeChainCoordinatedLakeRequestsClient(TableClient):
         chain_request_id -- The chain_request_id to get.
         """
         params = {
+            "ConsistentRead": True,
             "KeyConditionExpression": "ChainRequestId = :r_id",
             "ExpressionAttributeValues": {
                 ":r_id": {"S": chain_request_id},

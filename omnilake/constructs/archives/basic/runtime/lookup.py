@@ -67,7 +67,7 @@ _FN_NAME = "omnilake.constructs.archives.basic.lookup"
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME,
-                   logger=Logger(_FN_NAME))
+                   logger=Logger(_FN_NAME), handle_callbacks=True)
 def basic_lookup(event: Dict, context: Dict):
     '''
     Compacts the content of the resources.
