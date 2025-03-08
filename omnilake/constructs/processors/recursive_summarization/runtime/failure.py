@@ -20,7 +20,6 @@ from omnilake.tables.jobs.client import JobsClient, JobStatus
 
 # Local imports
 from omnilake.constructs.processors.recursive_summarization.runtime.event_definitions import (
-    SummarizationCompletedSchema,
     SummarizationRequestSchema,
 )
 

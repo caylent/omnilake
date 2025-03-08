@@ -35,6 +35,13 @@ class LakeChainRequest(TableObject):
 
     attributes = [
         TableObjectAttribute(
+            name="callback_event_type",
+            attribute_type=TableObjectAttributeType.STRING,
+            description="The event type to trigger the callback.",
+            optional=True,
+        ),
+
+        TableObjectAttribute(
             name="chain",
             attribute_type=TableObjectAttributeType.JSON_STRING_LIST,
             description="The raw representation of a request chain.",
@@ -115,14 +122,16 @@ class LakeChainRequest(TableObject):
         ),
     ]
 
-    def __init__(self, chain: List[Dict],  job_id: str, job_type: str, chain_execution_status: Optional[str] = None,
-                 chain_request_id: Optional[str] = None, conditions_met_requests: Optional[List[str]] = None,
-                 created_on: Optional[datetime] = None, ended: Optional[datetime] = None, executed_requests: Optional[Dict] = None,
+    def __init__(self, chain: List[Dict],  job_id: str, job_type: str, callback_event_type: Optional[str] = None,
+                 chain_execution_status: Optional[str] = None, chain_request_id: Optional[str] = None,
+                 conditions_met_requests: Optional[List[str]] = None, created_on: Optional[datetime] = None,
+                 ended: Optional[datetime] = None, executed_requests: Optional[Dict] = None,
                  num_remaining_running_requests: Optional[int] = 0, started: Optional[datetime] = None, unexecuted_request_names: Optional[Set[str]] = None):
             """
             Initialize a LakeChainRequest object.
     
             Keyword Arguments:
+            callback_event_type -- The event type to trigger the callback.
             chain -- The raw representation of a request chain.
             chain_execution_status -- The status of the request chain.
             chain_request_id -- The unique identifier for the request chain.
@@ -136,6 +145,7 @@ class LakeChainRequest(TableObject):
             started -- The date and time the request chain started.
             """
             super().__init__(
+                callback_event_type=callback_event_type,
                 chain=chain,
                 chain_execution_status=chain_execution_status,
                 chain_request_id=chain_request_id,

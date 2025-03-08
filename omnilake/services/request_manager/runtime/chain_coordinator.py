@@ -22,6 +22,7 @@ from da_vinci.exception_trap.client import ExceptionReporter
 
 from omnilake.internal_lib.clients import RawStorageManager
 from omnilake.internal_lib.event_definitions import (
+    LakeChainCompletionEventBodySchema,
     LakeChainRequestEventBodySchema,
     LakeCompletionEventBodySchema,
     LakeRequestEventBodySchema,
@@ -112,7 +113,8 @@ class LakeChainRequestSchema(ObjectBodySchema):
     attributes = [
         SchemaAttribute(
             name="conditional",
-            type=SchemaAttributeType.BOOLEAN
+            type=SchemaAttributeType.BOOLEAN,
+            required=False
         ),
         SchemaAttribute(
             name="lake_request",
@@ -730,6 +732,31 @@ def __close_chain(chain: LakeChainRequest, chain_status: LakeChainRequestStatus,
 
     chains.put(chain)
 
+    if not chain.callback_event_type:
+        logging.info("No callback to notify, finished closing")
+
+        return
+
+    logging.info(f"Notifying chain response at event_type: {chain.callback_event_type}")
+
+    # If there is a callback_event_type, publish the response status
+    event_publisher = EventPublisher()
+
+    callback_event = ObjectBody(
+        body={
+            "chain_request_id": chain.chain_request_id,
+            "response_status": chain_status
+        },
+        schema=LakeChainCompletionEventBodySchema
+    )
+
+    event_publisher.submit(
+        event=EventBusEvent(
+            body=callback_event.to_dict(),
+            event_type=chain.callback_event_type
+        ),
+    )
+
 
 _FN_NAME = 'omnilake.services.request_manager.chain_coordinator.handle_lake_response'
 
@@ -952,6 +979,11 @@ def handle_initiate_chain(event, context):
 
         # Set the chain status to executing
         chain = chains.get(chain_request_id=event_body["chain_request_id"])
+
+        callback_event_type = event_body.get("callback_event_type")
+
+        if callback_event_type:
+            chain.callback_event_type = callback_event_type
 
         chain.chain_execution_status = LakeChainRequestStatus.EXECUTING
 

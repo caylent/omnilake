@@ -235,6 +235,12 @@ class LakeCompletionEventBodySchema(ObjectBodySchema):
 class LakeChainRequestEventBodySchema(ObjectBodySchema):
     attributes = [
         SchemaAttribute(
+            name='callback_event_type',
+            type=SchemaAttributeType.STRING,
+            required=False,
+        ),
+
+        SchemaAttribute(
             name='chain',
             type=SchemaAttributeType.OBJECT_LIST,
         ),
@@ -263,6 +269,20 @@ class LakeChainRequestEventBodySchema(ObjectBodySchema):
             default_value='omnilake_chain_request',
             required=False,
         )
+    ]
+
+
+class LakeChainCompletionEventBodySchema(ObjectBodySchema):
+    attributes = [
+        SchemaAttribute(
+            name='chain_request_id',
+            type=SchemaAttributeType.STRING,
+        ),
+
+        SchemaAttribute(
+            name='response_status',
+            type=SchemaAttributeType.STRING,
+        ),
     ]
 
 

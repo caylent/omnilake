@@ -175,6 +175,39 @@ class BasicLookup(RequestBody):
         )
 
 
+class BulkEntryLookup(RequestBody):
+    """
+    This is a lookup instruction, it describes how the lake should lookup information.
+
+    This is a bulk lookup, it will lookup entries based on the provided information.
+
+    Keyword Arguments:
+    entry_ids -- The entry_ids to lookup
+    """
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'entry_ids',
+            attribute_type=RequestAttributeType.LIST,
+        ),
+
+        RequestBodyAttribute(
+            'request_type',
+            immutable_default='BULK_ENTRY',
+        ),
+    ]
+
+    def __init__(self, entry_ids: List[str]):
+        """
+        Initialize the BulkLookup
+
+        Keyword Arguments:
+        entry_ids -- The entry_ids to lookup
+        """
+        super().__init__(
+            entry_ids=entry_ids,
+        )
+
+
 class DirectEntryLookup(RequestBody):
     """
     This is a lookup instruction, it describes how the lake should lookup information.
@@ -410,6 +443,52 @@ class WebSiteLookup(RequestBody):
             archive_id=archive_id,
             retrieve_paths=retrieve_paths,
         )
+
+
+class InceptionProcessor(RequestBody):
+    """
+    Executes a sub-chain definition
+    """
+    attribute_definitions = [
+        RequestBodyAttribute(
+            'chain_definition',
+            attribute_type=RequestAttributeType.OBJECT_LIST,
+        ),
+
+        RequestBodyAttribute(
+            'entry_distribution_mode',
+            attribute_type=RequestAttributeType.STRING,
+            default='ALL',
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'join_instructions',
+            attribute_type=RequestAttributeType.OBJECT,
+            optional=True,
+        ),
+
+        RequestBodyAttribute(
+            'processor_type',
+            immutable_default='INCEPTION',
+        ),
+    ]
+
+    def __init__(self, chain_definition: List, entry_distribution_mode: Optional[str] = 'ALL',
+                join_instructions: Optional[dict] = None):
+            """
+            Initialize the InceptionProcessor
+    
+            Keyword Arguments:
+            chain_definition -- The chain definition to execute
+            entry_distribution_mode -- The entry distribution mode to use
+            join_instructions -- The join instructions to use
+            """
+            super().__init__(
+                chain_definition=chain_definition,
+                entry_distribution_mode=entry_distribution_mode,
+                join_instructions=join_instructions,
+            )
 
 
 ## LakeRequestProcessingInstructions

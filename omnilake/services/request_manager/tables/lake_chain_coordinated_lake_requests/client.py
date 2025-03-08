@@ -44,6 +44,13 @@ class LakeChainCoordinatedLakeRequest(TableObject):
 
     attributes = [
         TableObjectAttribute(
+            name="callback_event_type",
+            attribute_type=TableObjectAttributeType.STRING,
+            description="The event type name to use for the callback.",
+            optional=True,
+        ),
+
+        TableObjectAttribute(
             name="chain_request_name",
             attribute_type=TableObjectAttributeType.STRING,
             description="The unique name for the request.",
@@ -86,13 +93,15 @@ class LakeChainCoordinatedLakeRequest(TableObject):
     ]
 
     def __init__(self, chain_request_name: str, chain_request_id: str, lake_request_id: str,
-                 created_on: Optional[datetime] = None, execution_status: Optional[Union[CoordinatedLakeRequestStatus, str]] = None,
+                 callback_event_type: Optional[str] = None, created_on: Optional[datetime] = None,
+                 execution_status: Optional[Union[CoordinatedLakeRequestStatus, str]] = None,
                  validation_instructions: Optional[str] = None, validation_model_id: Optional[str] = None,
                  validation_status: Optional[Union[CoordinatedLakeRequestValidationStatus, str]] = None):
         """
         Initialize a LakeRequestChainRunningRequest object.
 
         Keyword Arguments:
+        callback_event_type -- The event type name to use for the callback.
         chain_request_id -- The unique identifier for the request chain.
         chain_request_name -- The unique name for the request.
         created_on -- The date and time the request was created.
@@ -103,6 +112,7 @@ class LakeChainCoordinatedLakeRequest(TableObject):
         validation_status -- The results of the request validation. Either SUCCESS or FAILURE.
         """
         super().__init__(
+            callback_event_type=callback_event_type,
             chain_request_id=chain_request_id,
             chain_request_name=chain_request_name,
             created_on=created_on,

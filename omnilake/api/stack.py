@@ -48,6 +48,10 @@ from omnilake.constructs.archives.web_site.stack import (
     LakeConstructArchiveWebSiteStack,
 )
 
+from omnilake.constructs.processors.inception.stack import (
+    LakeConstructProcessorInceptionStack,
+)
+
 from omnilake.constructs.processors.knowledge_graph.stack import (
     LakeConstructProcessorKnowledgeGraphStack,
 )
@@ -92,6 +96,7 @@ class OmniLakeAPIStack(Stack):
                 LakeConstructArchiveWebSiteStack,
                 LakeConstructResponderDirectStack,
                 LakeConstructResponderSimpleStack,
+                LakeConstructProcessorInceptionStack,
                 LakeConstructProcessorKnowledgeGraphStack,
                 LakeConstructProcessorRecursiveSummarizationStack,
                 LakeConstructResponderWrapStack,
