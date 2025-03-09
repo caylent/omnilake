@@ -632,6 +632,14 @@ class SummarizationProcessor(RequestBody):
     ```
     """
     attribute_definitions = [
+        # Should be one of RUNTIME, NEWEST, OLDEST, AVERAGE
+        RequestBodyAttribute(
+            'effective_on_calculation_rule',
+            attribute_type=RequestAttributeType.STRING,
+            default='RUNTIME',
+            optional=True,
+        ),
+
         # Must always have a goal, but it won't be used when the prompt is provided
         RequestBodyAttribute(
             'goal',
@@ -660,18 +668,20 @@ class SummarizationProcessor(RequestBody):
         ),
     ]
 
-    def __init__(self, goal: str, include_source_metadata: Optional[bool] = None, model_id: Optional[str] = None,
-                 prompt: Optional[str] = None):
+    def __init__(self, goal: str, effective_on_calculation_rule: Optional[str] = None, include_source_metadata: Optional[bool] = None,
+                 model_id: Optional[str] = None, prompt: Optional[str] = None):
         """
         Initialize the SummarizationProcessor
 
         Keyword Arguments:
+        effective_on_calculation_rule -- How to determine the effective_on date for the final response
         goal -- The goal of the request
         include_source_metadata -- Whether or not to include the source metadata in the response
         model_id -- The model_id to use for summarization
         prompt -- The prompt to use for summarization
         """
         super().__init__(
+            effective_on_calculation_rule=effective_on_calculation_rule,
             goal=goal,
             include_source_metadata=include_source_metadata,
             model_id=model_id,

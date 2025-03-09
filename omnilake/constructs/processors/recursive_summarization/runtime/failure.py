@@ -86,7 +86,9 @@ def handler(event: Dict, context: Dict):
     request_event_body = event_body.new(
         additions={
             "originating_event_details": {
-                "lake_request_id": summary_job.lake_request_id,
+                "event_body": {
+                    "lake_request_id": summary_job.lake_request_id,
+                },
             },
         }
     )

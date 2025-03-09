@@ -47,6 +47,13 @@ class SummarizationRequestSchema(ObjectBodySchema):
     '''
     attributes = [
         SchemaAttribute(
+            name='effective_on_calculation_rule',
+            type=SchemaAttributeType.STRING,
+            required=False,
+            default_value='RUNTIME',
+        ),
+
+        SchemaAttribute(
             name='entry_ids',
             type=SchemaAttributeType.STRING_LIST,
             required=True,

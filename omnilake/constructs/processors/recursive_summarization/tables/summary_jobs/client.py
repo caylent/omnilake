@@ -90,6 +90,12 @@ class SummaryJob(TableObject):
         ),
 
         TableObjectAttribute(
+            name="original_source_entry_ids",
+            attribute_type=TableObjectAttributeType.STRING_SET,
+            description="The entry ids of the original source resources of the summarization job context.",
+        ),
+
+        TableObjectAttribute(
             name="lake_request_id",
             attribute_type=TableObjectAttributeType.STRING,
             description="The lake request ID of the summarization job context.",
@@ -117,8 +123,8 @@ class SummaryJob(TableObject):
         ),
     ]
 
-    def __init__(self, goal: str, parent_job_id: str, parent_job_type: str, ai_invocation_ids: Optional[Set[str]] = None,
-                 configuration: Optional[Union[Dict, ObjectBody]] = None,
+    def __init__(self, goal: str, parent_job_id: str, parent_job_type: str, original_source_entry_ids: Set[str],
+                 ai_invocation_ids: Optional[Set[str]] = None, configuration: Optional[Union[Dict, ObjectBody]] = None,
                  created_on: Optional[datetime] = None, current_run: Optional[int] = 0,
                  current_run_completed_entry_ids: Optional[set] = None, execution_status: Optional[str] = None,
                  generated_entry_ids: Optional[set] = None, lake_request_id: Optional[str] = None,
@@ -148,6 +154,7 @@ class SummaryJob(TableObject):
             execution_status=execution_status,
             generated_entry_ids=generated_entry_ids,
             goal=goal,
+            original_source_entry_ids=original_source_entry_ids,
             lake_request_id=lake_request_id,
             parent_job_id=parent_job_id,
             parent_job_type=parent_job_type,
