@@ -261,7 +261,7 @@ def handler(event, context):
                 status_message=f"Too many entries returned by processor, expected 1, got {len(entry_ids)}",
             )
 
-            return
+            raise ValueError(f"Too many entries returned by processor, expected 1, got {len(entry_ids)}")
 
         construct_definition = _get_construct(
             operation_name='respond',
