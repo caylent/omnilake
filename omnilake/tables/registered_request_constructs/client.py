@@ -5,7 +5,7 @@ from datetime import datetime, UTC as utc_tz
 from enum import StrEnum
 from typing import Dict, Optional, Union, Type
 
-from da_vinci.core.orm import (
+from da_vinci.core.orm.client import (
     TableClient,
     TableObject,
     TableObjectAttribute,

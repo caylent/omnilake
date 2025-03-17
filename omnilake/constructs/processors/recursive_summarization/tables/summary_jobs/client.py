@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Dict, Optional, Set, Union
 from uuid import uuid4
 
-from da_vinci.core.orm import (
+from da_vinci.core.orm.client import (
     TableClient,
     TableObject,
     TableObjectAttribute,

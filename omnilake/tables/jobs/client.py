@@ -2,9 +2,9 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, UTC as utc_tz
 from enum import StrEnum
 from uuid import uuid4
-from typing import Dict, Generator, Optional
+from typing import Generator, Optional
 
-from da_vinci.core.orm import (
+from da_vinci.core.orm.client import (
     TableClient,
     TableObject,
     TableObjectAttribute,

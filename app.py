@@ -1,6 +1,6 @@
 import os
 
-from da_vinci_cdk.application import Application
+from da_vinci_cdk.application import Application, ResourceDiscoveryStorageSolution
 from da_vinci_cdk.stack import Stack
 
 from omnilake.api.stack import OmniLakeAPIStack
@@ -18,6 +18,7 @@ omnilake = Application(
     enable_exception_trap=True,
     enable_event_bus=True,
     log_level='DEBUG',
+    resource_discovery_storage_solution=ResourceDiscoveryStorageSolution.DYNAMODB,
 )
 
 omnilake.add_uninitialized_stack(OmniLakeAPIStack)

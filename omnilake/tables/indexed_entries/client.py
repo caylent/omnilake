@@ -1,7 +1,7 @@
 from datetime import datetime, UTC as utc_tz
 from typing import List, Optional
 
-from da_vinci.core.orm import (
+from da_vinci.core.orm.client import (
     TableClient,
     TableObject,
     TableObjectAttribute,

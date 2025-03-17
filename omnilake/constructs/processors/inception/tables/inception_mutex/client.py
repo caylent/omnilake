@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from botocore.exceptions import ClientError
 
-from da_vinci.core.orm import (
+from da_vinci.core.orm.client import (
     TableClient,
     TableObject,
     TableObjectAttribute,
