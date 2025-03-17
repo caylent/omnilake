@@ -2,14 +2,14 @@
 
 [[package]]
 name = "aiohappyeyeballs"
-version = "2.5.0"
+version = "2.6.1"
 description = "Happy Eyeballs for asyncio"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "aiohappyeyeballs-2.5.0-py3-none-any.whl", hash = "sha256:0850b580748c7071db98bffff6d4c94028d0d3035acc20fd721a0ce7e8cac35d"},
-    {file = "aiohappyeyeballs-2.5.0.tar.gz", hash = "sha256:18fde6204a76deeabc97c48bdd01d5801cfda5d6b9c8bbeb1aaaee9d648ca191"},
+    {file = "aiohappyeyeballs-2.6.1-py3-none-any.whl", hash = "sha256:f349ba8f4b75cb25c99c5c2d84e997e485204d2902a9597802b0371f09331fb8"},
+    {file = "aiohappyeyeballs-2.6.1.tar.gz", hash = "sha256:c3f9d0113123803ccadfdf3f0faa505bc78e6a72d1cc4806cbd719826e943558"},
 ]
 
 [[package]]
@@ -144,34 +144,34 @@ files = [
 
 [[package]]
 name = "attrs"
-version = "25.1.0"
+version = "25.3.0"
 description = "Classes Without Boilerplate"
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "dev"]
 files = [
-    {file = "attrs-25.1.0-py3-none-any.whl", hash = "sha256:c75a69e28a550a7e93789579c22aa26b0f5b83b75dc4e08fe092980051e1090a"},
-    {file = "attrs-25.1.0.tar.gz", hash = "sha256:1c97078a80c814273a76b2a298a932eb681c87415c11dee0a6921de7f1b02c3e"},
+    {file = "attrs-25.3.0-py3-none-any.whl", hash = "sha256:427318ce031701fea540783410126f03899a97ffc6f61596ad581ac2e40e3bc3"},
+    {file = "attrs-25.3.0.tar.gz", hash = "sha256:75d7cefc7fb576747b2c81b4442d4d4a1ce0900973527c011d1030fd3bf4af1b"},
 ]
 
 [package.extras]
 benchmark = ["cloudpickle ; platform_python_implementation == \"CPython\"", "hypothesis", "mypy (>=1.11.1) ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pympler", "pytest (>=4.3.0)", "pytest-codspeed", "pytest-mypy-plugins ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pytest-xdist[psutil]"]
 cov = ["cloudpickle ; platform_python_implementation == \"CPython\"", "coverage[toml] (>=5.3)", "hypothesis", "mypy (>=1.11.1) ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pytest-xdist[psutil]"]
 dev = ["cloudpickle ; platform_python_implementation == \"CPython\"", "hypothesis", "mypy (>=1.11.1) ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pre-commit-uv", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pytest-xdist[psutil]"]
-docs = ["cogapp", "furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-towncrier", "towncrier (<24.7)"]
+docs = ["cogapp", "furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-towncrier", "towncrier"]
 tests = ["cloudpickle ; platform_python_implementation == \"CPython\"", "hypothesis", "mypy (>=1.11.1) ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pytest-xdist[psutil]"]
 tests-mypy = ["mypy (>=1.11.1) ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\"", "pytest-mypy-plugins ; platform_python_implementation == \"CPython\" and python_version >= \"3.10\""]
 
 [[package]]
 name = "aws-cdk-asset-awscli-v1"
-version = "2.2.226"
+version = "2.2.227"
 description = "A library that contains the AWS CLI for use in Lambda Layers"
 optional = false
 python-versions = "~=3.8"
 groups = ["dev"]
 files = [
-    {file = "aws_cdk.asset_awscli_v1-2.2.226-py3-none-any.whl", hash = "sha256:44ed602ec0eb665a83d44005137e81023066701fe4ef6a9aaa0e55ad43b0242b"},
-    {file = "aws_cdk_asset_awscli_v1-2.2.226.tar.gz", hash = "sha256:5507338fa5169365d443a9daa6949a475d64f5220c3c0ca17ac141ecc0ca8228"},
+    {file = "aws_cdk.asset_awscli_v1-2.2.227-py3-none-any.whl", hash = "sha256:5160cd515d94d0da252806cd853a3e861e1b76aa553e1c90aec2bd712fa3df1b"},
+    {file = "aws_cdk_asset_awscli_v1-2.2.227.tar.gz", hash = "sha256:0fa4cf382e712121b8bbe11532854018abdba19964ded9c0aa9aace4383816b6"},
 ]
 
 [package.dependencies]
@@ -215,22 +215,22 @@ typeguard = ">=2.13.3,<4.3.0"
 
 [[package]]
 name = "aws-cdk-lib"
-version = "2.182.0"
+version = "2.184.1"
 description = "Version 2 of the AWS Cloud Development Kit library"
 optional = false
-python-versions = "~=3.8"
+python-versions = "~=3.9"
 groups = ["dev"]
 files = [
-    {file = "aws_cdk_lib-2.182.0-py3-none-any.whl", hash = "sha256:73b46fb789c7fe138f5ec15afa23c588fee706827edd056dd5fa8571e3d725dd"},
-    {file = "aws_cdk_lib-2.182.0.tar.gz", hash = "sha256:907a2969d7c48605f597b47e47adb0b58ac17bb8de71d4a97761513c76cb3aa8"},
+    {file = "aws_cdk_lib-2.184.1-py3-none-any.whl", hash = "sha256:2ab33a9bc8a42a425ae9e9214dd92e5e5d1885e210b4bfe16679498b1ea27b2e"},
+    {file = "aws_cdk_lib-2.184.1.tar.gz", hash = "sha256:dc57edaf8ceb21f68c6ebee214194f7b9d4ef013d27b9bfe93e35d71b965b013"},
 ]
 
 [package.dependencies]
-"aws-cdk.asset-awscli-v1" = ">=2.2.208,<3.0.0"
+"aws-cdk.asset-awscli-v1" = ">=2.2.227,<3.0.0"
 "aws-cdk.asset-node-proxy-agent-v6" = ">=2.1.0,<3.0.0"
-"aws-cdk.cloud-assembly-schema" = ">=40.6.0,<41.0.0"
+"aws-cdk.cloud-assembly-schema" = ">=40.7.0,<41.0.0"
 constructs = ">=10.0.0,<11.0.0"
-jsii = ">=1.106.0,<2.0.0"
+jsii = ">=1.109.0,<2.0.0"
 publication = ">=0.0.3"
 typeguard = ">=2.13.3,<4.3.0"
 
@@ -259,18 +259,18 @@ lxml = ["lxml"]
 
 [[package]]
 name = "boto3"
-version = "1.37.9"
+version = "1.37.13"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "dev"]
 files = [
-    {file = "boto3-1.37.9-py3-none-any.whl", hash = "sha256:cfff6e9cf4b987480fbbe85873f3e609aeea1906631c7148e5b7e3c778aebd40"},
-    {file = "boto3-1.37.9.tar.gz", hash = "sha256:51b76da93d7c2a3dff6155ee4aa25455940e7ade08292d22aeeed08b9e0dbf0b"},
+    {file = "boto3-1.37.13-py3-none-any.whl", hash = "sha256:90fa5a91d7d7456219f0b7c4a93b38335dc5cf4613d885da4d4c1d099e04c6b7"},
+    {file = "boto3-1.37.13.tar.gz", hash = "sha256:295648f887464ab74c5c301a44982df76f9ba39ebfc16be5b8f071ad1a81fe95"},
 ]
 
 [package.dependencies]
-botocore = ">=1.37.9,<1.38.0"
+botocore = ">=1.37.13,<1.38.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.11.0,<0.12.0"
 
@@ -279,14 +279,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.37.9"
+version = "1.37.13"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "dev"]
 files = [
-    {file = "botocore-1.37.9-py3-none-any.whl", hash = "sha256:bf0ab085ae85a4a2fa1733321069c1039745fa65ca9f335a91b8712fd6745d5f"},
-    {file = "botocore-1.37.9.tar.gz", hash = "sha256:2fdafbb9c44196cd371f4890aedf9f54352348fbae624a3880862d35724f0956"},
+    {file = "botocore-1.37.13-py3-none-any.whl", hash = "sha256:aa417bac0f4d79533080e6e17c0509e149353aec83cfe7879597a7942f7f08d0"},
+    {file = "botocore-1.37.13.tar.gz", hash = "sha256:60dfb831c54eb466db9b91891a6c8a0c223626caa049969d5d42858ad1e7f8c7"},
 ]
 
 [package.dependencies]
@@ -496,8 +496,8 @@ requests-auth-aws-sigv4 = "0.7"
 [package.source]
 type = "git"
 url = "https://github.com/jarosser06/da-vinci"
-reference = "HEAD"
-resolved_reference = "ed27e031de0d4e1581ab105d3c6911811da81339"
+reference = "resource_discovery_scaling"
+resolved_reference = "2da2f4ce7f91fd71908b2f32355704d340d62568"
 subdirectory = "da_vinci"
 
 [[package]]
@@ -513,13 +513,13 @@ develop = true
 [package.dependencies]
 aws-cdk-lib = "^2.115.0"
 constructs = "^10.0.0"
-da-vinci = {git = "https://github.com/jarosser06/da-vinci", subdirectory = "da_vinci"}
+da-vinci = {git = "https://github.com/jarosser06/da-vinci", branch = "resource_discovery_scaling", subdirectory = "da_vinci"}
 
 [package.source]
 type = "git"
 url = "https://github.com/jarosser06/da-vinci"
-reference = "HEAD"
-resolved_reference = "ed27e031de0d4e1581ab105d3c6911811da81339"
+reference = "resource_discovery_scaling"
+resolved_reference = "2da2f4ce7f91fd71908b2f32355704d340d62568"
 subdirectory = "da_vinci-cdk"
 
 [[package]]
@@ -700,14 +700,14 @@ files = [
 
 [[package]]
 name = "jsii"
-version = "1.108.0"
+version = "1.109.0"
 description = "Python client for jsii runtime"
 optional = false
-python-versions = "~=3.8"
+python-versions = "~=3.9"
 groups = ["dev"]
 files = [
-    {file = "jsii-1.108.0-py3-none-any.whl", hash = "sha256:d6c99671ab44520069ad6198e3b07379ae9c075bcb53b8a16455c1beb10288ea"},
-    {file = "jsii-1.108.0.tar.gz", hash = "sha256:f1053a414ac117c6ecae7208c5ca4cb6d10ca3420c69e30f8b9cca64cc37e61b"},
+    {file = "jsii-1.109.0-py3-none-any.whl", hash = "sha256:100bb48c7f74b8e22b3182c5466db1c32565ddb681ed5e2bf556076a734d3f07"},
+    {file = "jsii-1.109.0.tar.gz", hash = "sha256:85e0deca8089e2918776541e986d5abab90a66d4330eedfc14e8a060dd507bad"},
 ]
 
 [package.dependencies]
@@ -1314,14 +1314,14 @@ torch = ["torch"]
 
 [[package]]
 name = "pypdf"
-version = "5.3.1"
+version = "5.4.0"
 description = "A pure-python PDF library capable of splitting, merging, cropping, and transforming PDF files"
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "pypdf-5.3.1-py3-none-any.whl", hash = "sha256:20ea5b8686faad1b695fda054462b667d5e5f51e25fbbc092f12c5e0bb20d738"},
-    {file = "pypdf-5.3.1.tar.gz", hash = "sha256:0b9b715252b3c60bacc052e6a780e8b742cee9b9a2135f6007bb018e22a5adad"},
+    {file = "pypdf-5.4.0-py3-none-any.whl", hash = "sha256:db994ab47cadc81057ea1591b90e5b543e2b7ef2d0e31ef41a9bfe763c119dab"},
+    {file = "pypdf-5.4.0.tar.gz", hash = "sha256:9af476a9dc30fcb137659b0dec747ea94aa954933c52cf02ee33e39a16fe9175"},
 ]
 
 [package.extras]
@@ -1640,4 +1640,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "642116967a9e28dedb9d04026616d4f967264f1cf95d104cf108358b5c1c5f2c"
+content-hash = "d199696db9c85712624f77398b030a79c173aace6a57de2e46fbd1d43e909239"
