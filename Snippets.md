@@ -1,3 +1,18 @@
+### Install Omnilake CLI Globally
+```bash
+pip install -e .
+```
+
+### Create scaffolding for a new project using the CLI
+```bash
+poetry run omni initialize_project --name iridium_test_scaffolding
+```
+
+### Create scaffolding new construct using the CLI
+```bash
+poetry run omni create-construct --name my_construct --type archive
+```
+
 ### Auto Bootstrap the CDK Environment Prior to Deployment
 ```bash
 poetry run cdk bootstrap aws://$(aws sts get-caller-identity --query Account --output text)/us-west-2
