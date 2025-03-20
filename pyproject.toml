@@ -19,6 +19,7 @@ python-louvain = "^0.16"
 [tool.poetry.group.dev.dependencies]
 pypdf = "^5.1.0"
 da-vinci-cdk = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci-cdk" }
+pytest = "^8.3.4"
 
 [build-system]
 requires = ["poetry-core"]

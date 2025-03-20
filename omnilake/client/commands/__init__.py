@@ -8,5 +8,14 @@ Omnitizer Commands
 from omnilake.client.commands.chain import ChainCommand
 from omnilake.client.commands.index import RefreshIndexCommand
 from omnilake.client.commands.question import QuestionCommand
+from omnilake.client.commands.create_construct import CreateConstructCommand
+from omnilake.client.commands.initialize_project import InitializeProjectCommand  # ← add this import
 
-__all__ = {k.command_name: k for k in [ChainCommand, RefreshIndexCommand, QuestionCommand]}
+
+__all__ = {k.command_name: k for k in [
+    ChainCommand,
+    RefreshIndexCommand,
+    QuestionCommand,
+    CreateConstructCommand,
+    InitializeProjectCommand
+]}
