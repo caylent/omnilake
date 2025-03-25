@@ -187,6 +187,16 @@ class VectorStorageSearch:
 
         db = lancedb.connect(f's3://{self.storage_bucket_name}')
 
+        # Proactive validation
+        if max_entries is None or not isinstance(max_entries, int) or max_entries <= 0:
+            raise ValueError(f"Invalid max_entries: {max_entries}. Must be a positive integer.")
+
+        # Reactive error handling
+        try:
+            result_limits = max_entries + math.ceil(max_entries * 0.3)
+        except TypeError as e:
+            raise TypeError(f"Error calculating result_limits with max_entries={max_entries}") from e
+
         resulting_entries = self._query(
             db=db,
             query=query,
