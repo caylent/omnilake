@@ -194,8 +194,8 @@ class VectorStorageSearch:
         # Reactive error handling
         try:
             result_limits = max_entries + math.ceil(max_entries * 0.3)
-        except TypeError as e:
-            raise TypeError(f"Error calculating result_limits with max_entries={max_entries}") from e
+        except TypeError as error:
+            raise TypeError(f"Error calculating result_limits with max_entries = {max_entries}") from error
 
         resulting_entries = self._query(
             db=db,
