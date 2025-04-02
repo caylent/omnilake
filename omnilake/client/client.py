@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import Any, List, Optional, Union, Type
 
 from da_vinci.core.client_base import RESTClientBase, RESTClientResponse
-
+from da_vinci.core.resource_discovery import ResourceDiscoveryStorageSolution
 
 __version__ = '2025.1.1'
 
@@ -202,12 +202,14 @@ class OmniClientJSONEncoder(json.JSONEncoder):
 
 
 class OmniLake(RESTClientBase):
-    def __init__(self, app_name: str = os.getenv('OMNILAKE_APP_NAME', 'omnilake'),
-                 deployment_id: str = os.getenv('OMNILAKE_DEPLOYMENT_ID', 'dev')):
+    def __init__(self, app_name: str = None,
+                 deployment_id: str = None
+                 ):
         super().__init__(
             resource_name='omnilake-private-api',
-            app_name=app_name,
-            deployment_id=deployment_id
+            app_name=app_name or os.getenv('OMNILAKE_APP_NAME', 'omnilake'),
+            deployment_id=deployment_id or os.getenv('OMNILAKE_DEPLOYMENT_ID', 'dev'),
+            resource_discovery_storage_solution=ResourceDiscoveryStorageSolution.DYNAMODB
         )
 
     def request(self, request: RequestBody) -> RESTClientResponse:
