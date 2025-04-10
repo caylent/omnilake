@@ -208,8 +208,7 @@ class OmniLake(RESTClientBase):
         super().__init__(
             resource_name='omnilake-private-api',
             app_name=app_name or os.getenv('OMNILAKE_APP_NAME', 'omnilake'),
-            deployment_id=deployment_id or os.getenv('OMNILAKE_DEPLOYMENT_ID', 'dev'),
-            resource_discovery_storage_solution=ResourceDiscoveryStorageSolution.DYNAMODB
+            deployment_id=deployment_id or os.getenv('OMNILAKE_DEPLOYMENT_ID', 'dev')
         )
 
     def request(self, request: RequestBody) -> RESTClientResponse:
