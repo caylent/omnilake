@@ -121,6 +121,7 @@ class OmniLakeAPIStack(Stack):
 
         self.api_handler = SimpleRESTService(
             base_image=self.app_base_image,
+            architecture=self.architecture,
             entry=self.runtime_path,
             index='api',
             handler='handler',

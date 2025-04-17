@@ -6,7 +6,6 @@ from enum import StrEnum
 from typing import Any, List, Optional, Union, Type
 
 from da_vinci.core.client_base import RESTClientBase, RESTClientResponse
-from da_vinci.core.resource_discovery import ResourceDiscoveryStorageSolution
 
 __version__ = '2025.1.1'
 

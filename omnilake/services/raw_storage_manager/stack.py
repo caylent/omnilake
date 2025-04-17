@@ -71,6 +71,7 @@ class LakeRawStorageManagerStack(Stack):
 
         self.raw_storage_manager = SimpleRESTService(
             base_image=self.app_base_image,
+            architecture=self.architecture,
             description='Manages the raw data storage',
             entry=self.runtime_path,
             index='raw_manager.py',

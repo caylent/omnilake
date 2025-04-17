@@ -53,6 +53,7 @@ class AIStatisticsCollectorStack(Stack):
 
         self.trap = SimpleRESTService(
             base_image=self.app_base_image,
+            architecture=self.architecture,
             description='Service to trap AI statistics',
             entry=self.runtime_path,
             handler='api',
