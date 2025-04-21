@@ -11,11 +11,11 @@ from da_vinci_cdk.constructs.global_setting import GlobalSetting, GlobalSettingT
 from da_vinci_cdk.constructs.service import SimpleRESTService
 from da_vinci_cdk.stack import Stack
 
+from omnilake.ai.stack import AIStack
 from omnilake.services.ai_statistics_collector.tables.ai_statistics.stack import (
     AIStatisticsTable,
     InvocationStatistic,
 )
-
 
 class AIStatisticsCollectorStack(Stack):
     def __init__(self, app_base_image: str, app_name: str, architecture: str, deployment_id: str, scope: Construct,
@@ -47,6 +47,7 @@ class AIStatisticsCollectorStack(Stack):
             library_base_image=library_base_image,
             requires_exceptions_trap=True,
             required_stacks=[
+                AIStack,
                 AIStatisticsTable,
             ],
         )

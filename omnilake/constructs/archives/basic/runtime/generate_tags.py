@@ -14,7 +14,8 @@ from da_vinci.exception_trap.client import ExceptionReporter
 from da_vinci.event_bus.client import fn_event_response
 from da_vinci.event_bus.event import Event as EventBusEvent
 
-from omnilake.internal_lib.ai import AI, ModelIDs, AIInvocationResponse
+from omnilake.ai.models import ModelIDs
+from omnilake.ai.client import AIInvocationClient, AIInvocationResponse
 from omnilake.internal_lib.ai_insights import (
     AIResponseDefinition,
     AIResponseInsightDefinition,
@@ -43,7 +44,7 @@ def extract_tags(content: str, tag_hint: Optional[str] = None, tag_model_id: Opt
     tag_model_id -- The model ID used for tagging
     tag_model_params -- The model parameters used for tagging
     """
-    ai = AI()
+    ai = AIInvocationClient()
 
     prompt_definition = """Extract relevant tags from the given content, focusing on:
 

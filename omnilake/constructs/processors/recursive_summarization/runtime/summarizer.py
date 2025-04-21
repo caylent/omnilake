@@ -16,6 +16,7 @@ from da_vinci.exception_trap.client import ExceptionReporter
 from da_vinci.event_bus.client import fn_event_response, EventPublisher
 from da_vinci.event_bus.event import Event as EventBusEvent
 
+from omnilake.ai.client import AIInvocationClient
 from omnilake.internal_lib.ai import AI
 from omnilake.internal_lib.clients import (
     AIStatisticSchema,
@@ -230,7 +231,7 @@ def handler(event: Dict, context: Dict):
 
         logging.debug(f'Summary prompt: {prompt}')
 
-        ai = AI()
+        ai = AIInvocationClient()
 
         summarization_result = ai.invoke(prompt=prompt, max_tokens=8000, model_id=event_body.get("model_id"))
 

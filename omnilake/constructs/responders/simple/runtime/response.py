@@ -16,6 +16,7 @@ from da_vinci.exception_trap.client import ExceptionReporter
 from da_vinci.event_bus.client import fn_event_response, EventPublisher
 from da_vinci.event_bus.event import Event as EventBusEvent
 
+from omnilake.ai.client import AIInvocationClient
 from omnilake.internal_lib.ai import AI
 from omnilake.internal_lib.clients import RawStorageManager
 from omnilake.internal_lib.event_definitions import (
@@ -174,7 +175,7 @@ def final_responder(event: Dict, context: Dict) -> None:
 
         logging.debug(f'Final response prompt: {prompt}')
 
-        ai = AI()
+        ai = AIInvocationClient()
 
         model_id = response_config.get("model_id")
 
