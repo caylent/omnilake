@@ -1,7 +1,7 @@
 from constructs import Construct
 
 from da_vinci_cdk.stack import Stack
-from da_vinci_cdk.constructs.ai import AIInferenceProfile
+from da_vinci_cdk.constructs.ai import AIInferenceProfile, ModelType
 
 from omnilake.ai.models import ModelIDs
 
@@ -25,12 +25,16 @@ class AIStack(Stack):
             requires_exceptions_trap=False,
         )
 
-        self.haiku = AIInferenceProfile(
+        self.haiku_cr = AIInferenceProfile(
             scope=self,
-            model_id=ModelIDs.HAIKU
+            profile_name='claude-3-5-haiku',
+            model_id=ModelIDs.HAIKU.value,
+            model_type=ModelType.INFERENCE_PROFILE
         )
 
-        self.sonnet = AIInferenceProfile(
+        self.sonnet_cr = AIInferenceProfile(
             scope=self,
-            model_id=ModelIDs.SONNET
+            profile_name='claude-3-7-sonnet',
+            model_id=ModelIDs.SONNET.value,
+            model_type=ModelType.INFERENCE_PROFILE
         )

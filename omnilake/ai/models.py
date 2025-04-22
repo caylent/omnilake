@@ -6,8 +6,8 @@ class ModelIDs(StrEnum):
     """
     The ModelIDs class is used to store the supported model IDs.
     """
-    HAIKU = 'anthropic.claude-3-5-haiku-20241022-v1:0'
-    SONNET = 'anthropic.claude-3-7-sonnet-20250219-v1:0'
+    HAIKU = 'us.anthropic.claude-3-5-haiku-20241022-v1:0'
+    SONNET = 'us.anthropic.claude-3-7-sonnet-20250219-v1:0'
 
 class AIModel(ABC):
     def __init__(self, model_id: str):

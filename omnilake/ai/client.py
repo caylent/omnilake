@@ -92,7 +92,7 @@ class AIInvocationClient:
 
         ai_model = self._resolve_model(model_id)
 
-        inference_profile_id = self._resolve_inference_profile_id(model_id)
+        inference_profile_id = self._resolve_inference_profile_id(model_id) or model_id
 
         invocation_body = ai_model.build_invocation_body(prompt, max_tokens, **invocation_kwargs)
 
