@@ -17,7 +17,6 @@ from da_vinci.event_bus.client import fn_event_response, EventPublisher
 from da_vinci.event_bus.event import Event as EventBusEvent
 
 from omnilake.ai.client import AIInvocationClient
-from omnilake.internal_lib.ai import AI
 from omnilake.internal_lib.clients import (
     AIStatisticSchema,
     AIStatisticsCollector,

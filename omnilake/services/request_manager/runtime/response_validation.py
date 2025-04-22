@@ -9,7 +9,6 @@ from uuid import uuid4
 from da_vinci.core.immutable_object import ObjectBody
 
 from omnilake.ai.client import AIInvocationClient
-from omnilake.internal_lib.ai import AI
 
 from omnilake.internal_lib.clients import (
     AIStatisticSchema,
