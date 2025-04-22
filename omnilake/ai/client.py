@@ -15,7 +15,6 @@ class AIInvocationStatistics:
     input_tokens: int
     output_tokens: int
     model_id: str
-    profile_id: str
 
     def to_dict(self):
         return asdict(self)
@@ -54,11 +53,11 @@ class AIInvocationClient:
             logger.error(f"Failed to resolve inference profile ID for model {model_id}: {e}")
             return None
 
-    def _internal_invoke(self, model: AIModel, inference_profile_id: str, invocation_body: dict) -> AIInvocationResponse:
-        logger.info(f"Invoking Bedrock model {model.model_id} via inference profile {inference_profile_id} with: {invocation_body}")
+    def _internal_invoke(self, model_id: str, invocation_body: dict) -> AIInvocationResponse:
+        logger.info(f"Invoking Bedrock model {model_id} with: {invocation_body}")
 
         response = self.bedrock.invoke_model(
-            modelId=inference_profile_id,
+            modelId=model_id,
             contentType="application/json",
             accept="application/json",
             body=json.dumps(invocation_body)
@@ -71,8 +70,7 @@ class AIInvocationClient:
         return AIInvocationResponse(
             response=response_body['content'][0]['text'],
             statistics=AIInvocationStatistics(
-                model_id=model.model_id,
-                profile_id=inference_profile_id,
+                model_id=model_id,
                 input_tokens=response_body['usage']['input_tokens'],
                 output_tokens=response_body['usage']['output_tokens'],
             )
@@ -96,8 +94,8 @@ class AIInvocationClient:
 
         ai_model = self._resolve_model(model_id)
 
-        inference_profile_id = self._resolve_inference_profile_id(model_id) or model_id
+        actual_model_id = self._resolve_inference_profile_id(model_id) or model_id
 
         invocation_body = ai_model.build_invocation_body(prompt, max_tokens, **invocation_kwargs)
 
-        return self._internal_invoke(inference_profile_id, invocation_body)
+        return self._internal_invoke(actual_model_id, invocation_body)
