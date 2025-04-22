@@ -48,7 +48,11 @@ class AIInvocationClient:
             resource_name=model_id,
             resource_type=ResourceType.LLM
         )
-        return resource_discovery.endpoint_lookup()
+        try:
+            return resource_discovery.endpoint_lookup()
+        except Exception as e:
+            logger.error(f"Failed to resolve inference profile ID for model {model_id}: {e}")
+            return None
 
     def _internal_invoke(self, model: AIModel, inference_profile_id: str, invocation_body: dict) -> AIInvocationResponse:
         logger.info(f"Invoking Bedrock model {model.model_id} via inference profile {inference_profile_id} with: {invocation_body}")
