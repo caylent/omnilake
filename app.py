@@ -1,4 +1,5 @@
 import os
+import aws_cdk
 
 from da_vinci_cdk.application import Application, ResourceDiscoveryStorageSolution
 from da_vinci_cdk.stack import Stack
@@ -19,6 +20,7 @@ omnilake = Application(
     enable_event_bus=True,
     log_level='DEBUG',
     resource_discovery_storage_solution=ResourceDiscoveryStorageSolution.DYNAMODB,
+    #architecture=aws_cdk.aws_lambda.Architecture.X86_64, # Uncomment if you want to use x86_64 architecture
 )
 
 omnilake.add_uninitialized_stack(OmniLakeAPIStack)
